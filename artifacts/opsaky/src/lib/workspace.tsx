@@ -5,6 +5,7 @@ import {
   getOpsakySession, listPages, listAccounts, createPage as apiCreatePage,
   savePage as apiSavePage, deletePage as apiDeletePage, checkHandle as apiCheckHandle,
   requestActivation as apiRequestActivation, updateAccountStatus, getPublicPage as apiGetPublicPage,
+  type StorePage as ApiStorePage,
 } from "@workspace/api-client-react";
 import { type Account, type AccountStatus, type ActivationInput, type StorePage, type PageConfig, newPage, validSlug, THEMES } from "./model";
 import { demoAccount, demoAccounts, demoPages } from "./demo";
@@ -51,7 +52,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         s.signedIn && approved ? listPages() : Promise.resolve([]),
         s.signedIn && s.isAdmin ? listAccounts() : Promise.resolve([]),
       ]);
-      setPages(owned.map(p => toPage(p)));
+      setPages(owned.map((p: ApiStorePage) => toPage(p)));
       setAccounts(all as Account[]);
       setError(null);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load your workspace."); }

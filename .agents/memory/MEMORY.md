@@ -1,1 +1,1 @@
-
+- [Clean deployment checks](clean-deployment-checks.md) — verify the isolated app build without locally generated shared-package declarations.
