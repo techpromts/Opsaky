@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { CATEGORIES, THEMES, slugify, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
-import { compressImage } from "@/lib/images";
+import { compressImage, isSupportedImageType, MAX_IMAGE_DATA_URL_LENGTH, type ImageCompressionOptions } from "@/lib/images";
 import { contrastRatio, detectPlatform } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
@@ -20,6 +20,27 @@ import { pageUrl } from "@/lib/urls";
 
 const MAX_LINKS = 7;
 const MAX_GALLERY = 4;
+const LOGO_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 400, maxHeight: 400 };
+const PAGE_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 1000 };
+
+async function compressExistingImage(dataUrl: string, options: ImageCompressionOptions): Promise<string> {
+  if (!dataUrl.startsWith("data:image/") || dataUrl.length <= MAX_IMAGE_DATA_URL_LENGTH) return dataUrl;
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], "existing-page-image", { type: blob.type });
+  return compressImage(file, options);
+}
+
+async function preparePageImages(page: StorePage): Promise<StorePage> {
+  const [logo, backgroundImage, gallery] = await Promise.all([
+    compressExistingImage(page.config.logo, LOGO_IMAGE_SIZE),
+    compressExistingImage(page.config.backgroundImage, PAGE_IMAGE_SIZE),
+    Promise.all(page.config.gallery.map(async (item) => ({
+      ...item,
+      image: await compressExistingImage(item.image, PAGE_IMAGE_SIZE),
+    }))),
+  ]);
+  return { ...page, config: { ...page.config, logo, backgroundImage, gallery } };
+}
 type Tab = "content" | "design" | "layout" | "links";
 const TABS: { id: Tab; label: string; icon: typeof Type }[] = [
   { id: "content", label: "Content", icon: Type },
@@ -52,7 +73,7 @@ function UploadButton({ onFile, label, testId, busy }: { onFile: (f: File) => vo
   const ref = useRef<HTMLInputElement>(null);
   return (
     <>
-      <input ref={ref} type="file" accept="image/*" className="hidden" data-testid={testId}
+      <input ref={ref} type="file" accept=".jpg,.jpeg,.png,.webp,.avif" className="hidden" data-testid={testId}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
       <Btn type="button" variant="soft" size="sm" loading={busy} onClick={() => ref.current?.click()}><Upload className="h-3.5 w-3.5" />{label}</Btn>
     </>
@@ -61,11 +82,19 @@ function UploadButton({ onFile, label, testId, busy }: { onFile: (f: File) => vo
 
 function useUploader() {
   const [busyKey, setBusy] = useState<string | null>(null);
-  async function run(key: string, file: File, done: (data: string) => void) {
-    if (!file.type.startsWith("image/")) { toast.error("Please choose an image file."); return; }
+  async function run(key: string, file: File, options: ImageCompressionOptions, done: (data: string) => void) {
+    if (!isSupportedImageType(file.type)) {
+      toast.error("Unsupported file type. Choose a JPEG, PNG, WebP, or AVIF image.");
+      return;
+    }
     setBusy(key);
-    try { done(await compressImage(file)); }
-    catch { toast.error("That image could not be processed. Try a JPG or PNG."); }
+    try {
+      const data = await compressImage(file, options);
+      done(data);
+      toast.success("Image ready. Save the page to publish it.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Image upload failed. Try another file.");
+    }
     finally { setBusy(null); }
   }
   return { busyKey, run };
@@ -85,7 +114,7 @@ function ContentTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (
             {c.logo ? <img src={c.logo} alt="Logo" className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 text-muted" />}
           </div>
           <div className="flex flex-wrap gap-2">
-            <UploadButton label={c.logo ? "Replace logo" : "Upload logo"} testId="input-logo" busy={up.busyKey === "logo"} onFile={(f) => up.run("logo", f, (d) => set("logo", d))} />
+            <UploadButton label={c.logo ? "Replace logo" : "Upload logo"} testId="input-logo" busy={up.busyKey === "logo"} onFile={(f) => up.run("logo", f, LOGO_IMAGE_SIZE, (d) => set("logo", d))} />
             {c.logo && <Btn type="button" size="sm" variant="ghost" onClick={() => set("logo", "")} data-testid="button-remove-logo"><X className="h-3.5 w-3.5" />Remove</Btn>}
           </div>
         </div>
@@ -154,13 +183,13 @@ function ContentTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (
                 <TextInput value={g.title} onChange={(e) => updateItem(g.id, { title: e.target.value })} placeholder="Item title" className="h-9 text-[13px]" />
                 <TextInput value={g.price} onChange={(e) => updateItem(g.id, { price: e.target.value })} placeholder="Price" className="h-9 w-24 text-[13px]" />
               </div>
-              <div className="mt-2"><UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, (d) => updateItem(g.id, { image: d }))} /></div>
+              <div className="mt-2"><UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, PAGE_IMAGE_SIZE, (d) => updateItem(g.id, { image: d }))} /></div>
             </div>
           ))}
           {c.gallery.length < MAX_GALLERY && (
             <label className={cn("flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/15 text-ink-2 transition hover:border-coral hover:text-coral", up.busyKey === "new" && "pointer-events-none opacity-60")}>
-              <input type="file" accept="image/*" className="hidden" data-testid="input-gallery-new"
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) up.run("new", f, (d) => set("gallery", [...c.gallery, { id: uid(), image: d, title: "", price: "" }])); }} />
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,.avif" className="hidden" data-testid="input-gallery-new"
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) up.run("new", f, PAGE_IMAGE_SIZE, (d) => set("gallery", [...c.gallery, { id: uid(), image: d, title: "", price: "" }])); }} />
               {up.busyKey === "new" ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
               <span className="mt-2 text-[13px] font-semibold">Add photo</span>
               <span className="font-mono text-[11px] text-muted">{MAX_GALLERY - c.gallery.length} slots left</span>
@@ -223,7 +252,7 @@ function DesignTab({ c, set, apply }: { c: PageConfig; set: Set; apply: (p: Part
           <>
             <div className="flex items-center gap-3">
               <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2">{c.backgroundImage && <img src={c.backgroundImage} alt="Background" className="h-full w-full object-cover" />}</div>
-              <UploadButton label={c.backgroundImage ? "Replace image" : "Upload image"} testId="input-bg-image" busy={up.busyKey === "bg"} onFile={(f) => up.run("bg", f, (d) => set("backgroundImage", d))} />
+              <UploadButton label={c.backgroundImage ? "Replace image" : "Upload image"} testId="input-bg-image" busy={up.busyKey === "bg"} onFile={(f) => up.run("bg", f, PAGE_IMAGE_SIZE, (d) => set("backgroundImage", d))} />
               {c.backgroundImage && <Btn type="button" size="sm" variant="ghost" onClick={() => set("backgroundImage", "")}>Remove</Btn>}
             </div>
             <Range label="Blur" value={c.blur} min={0} max={20} suffix="px" onChange={(v) => set("blur", v)} testId="range-blur" />
@@ -482,7 +511,8 @@ export function Editor({ id }: { id: string }) {
     if (!validSlug(draft.slug) || otherSlugs.has(draft.slug)) { setSaveErr("The page handle is invalid or already used."); return; }
     setSaving(true); setSaveErr(null);
     try {
-      const res = await ws.savePage(draft);
+      const optimizedDraft = await preparePageImages(draft);
+      const res = await ws.savePage(optimizedDraft);
       setDraft(res); setSaved(JSON.stringify(res));
       toast.success(isDemo ? "Saved in this browser" : "Changes saved");
     } catch (e) {

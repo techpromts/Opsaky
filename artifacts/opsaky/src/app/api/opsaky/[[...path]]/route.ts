@@ -17,7 +17,7 @@ const accountView = (a: { _count?: { pages: number }; [key: string]: unknown }) 
 };
 async function body(req: NextRequest) {
   const content = await req.text();
-  if (Buffer.byteLength(content, "utf8") > 3_700_000) throw new HttpError(413, "Images are too large. Use smaller compressed images.");
+  if (Buffer.byteLength(content, "utf8") > 2_000_000) throw new HttpError(413, "Images are too large. Use smaller compressed images.");
   try { return JSON.parse(content); } catch { throw new HttpError(400, "Invalid JSON request."); }
 }
 async function handle(req: NextRequest, { params }: Context) {
@@ -30,7 +30,7 @@ async function handle(req: NextRequest, { params }: Context) {
       const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
       if (origin && new URL(origin).host !== host) throw new HttpError(403, "Cross-origin writes are not allowed.");
       const length = Number(req.headers.get("content-length") ?? 0);
-      if (length > 3_700_000) throw new HttpError(413, "Upload size limit exceeded.");
+      if (length > 2_000_000) throw new HttpError(413, "Upload size limit exceeded.");
     }
     if (resource === "session" && req.method === "GET") {
       if (!authConfigured()) return json({ configured: false, signedIn: false, isAdmin: false, email: "", account: null });

@@ -124,6 +124,9 @@ export function Landing() {
           <Btn variant="ghost" size="sm" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top</Btn>
         </div>
       </section>
+      <footer className="border-t border-line/70 px-5 py-5 text-center text-[12px] font-medium text-muted">
+        Powered by techpromts
+      </footer>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { CATEGORIES, validSlug } from "../model";
 const text = (max: number) => z.string().max(max);
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 // Tiny database-backed images only. External sample images are restricted to bundled demo assets.
-const image = z.string().max(320000).refine(s => s === "" || /^data:image\/(?:jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s), "Upload a compressed JPEG or WebP image.");
+const image = z.string().max(249999, "Images must be under 250 KB.").refine(s => s === "" || /^data:image\/(?:jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s), "Upload a compressed JPEG or WebP image.");
 const linkUrl = text(2000).refine(value => {
   try {
     const u = new URL(/^\+?[\d\s()-]{7,20}$/.test(value) ? `https://wa.me/${value.replace(/\D/g, "")}` : /^[a-z][a-z\d+.-]*:/i.test(value) ? value : `https://${value}`);
