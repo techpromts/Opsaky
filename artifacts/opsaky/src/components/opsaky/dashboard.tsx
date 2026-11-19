@@ -12,17 +12,11 @@ import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, Label, Modal, Skeleton, StatusBadge, TextInput } from "./ui";
 import { StoreThumb } from "./storefront";
+import { displayUrl, pageUrl } from "@/lib/urls";
+export { displayUrl, pageUrl } from "@/lib/urls";
 
 export const MAX_PAGES = 10;
 
-export function pageUrl(slug: string, isDemo: boolean) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return isDemo ? `${origin}/demo/preview/${slug}` : `${origin}/${slug}`;
-}
-export function displayUrl(slug: string, isDemo: boolean) {
-  const host = typeof window !== "undefined" ? window.location.host : "opsaky.com";
-  return isDemo ? `${host}/demo/preview/${slug}` : `${host}/${slug}`;
-}
 export async function copyText(text: string, msg = "Link copied") {
   try { await navigator.clipboard.writeText(text); toast.success(msg); }
   catch { toast.error("Could not access the clipboard. Copy it manually: " + text); }
@@ -171,7 +165,7 @@ function ActivationRequest() {
         <div>
           <Label>First page handle</Label>
           <div className="flex h-11 items-center rounded-xl border border-line bg-white/80 pl-3.5 focus-within:border-ink focus-within:ring-4 focus-within:ring-ink/5">
-            <span className="shrink-0 font-mono text-[12.5px] text-muted">opsaky.com/</span>
+            <span className="max-w-[50%] shrink-0 truncate font-mono text-[12.5px] text-muted" title={displayUrl("", false)}>{displayUrl("", false)}</span>
             <input value={effectiveSlug} onChange={(e) => { setTouched(true); setSlug(slugify(e.target.value)); }} placeholder="your-shop"
               className="h-full w-full bg-transparent pr-3 font-mono text-[13px] text-ink outline-none" data-testid="input-slug" />
           </div>
@@ -206,7 +200,7 @@ function PendingGate() {
           : "Your account will be unlocked once it is confirmed by the Opsaky team. This page updates on its own."}
       </p>
       <dl className="mt-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white/60 text-[13.5px]">
-        {[["Google email", ws.session.email], ["Business", a.businessName], ["Category", a.category], ["Requested handle", `opsaky.com/${a.requestedSlug}`]].map(([k, v]) => (
+        {[["Google email", ws.session.email], ["Business", a.businessName], ["Category", a.category], ["Requested handle", displayUrl(a.requestedSlug, false)]].map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 px-4 py-3"><dt className="text-muted">{k}</dt><dd className="truncate text-right font-semibold" data-testid={`text-${slugify(k)}`}>{v}</dd></div>
         ))}
       </dl>
@@ -335,7 +329,7 @@ function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => 
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" title="Copy link" data-testid={`button-share-${page.id}`}>
             <Copy className="h-3.5 w-3.5" />
           </button>
-          <a href={isDemo ? `/demo/preview/${page.slug}` : `/${page.slug}`} target="_blank" rel="noreferrer"
+          <a href={pageUrl(page.slug, isDemo)} target="_blank" rel="noreferrer"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" title={isDemo ? "Open local preview" : "Open public page"} data-testid={`link-open-${page.id}`}>
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
@@ -461,7 +455,7 @@ function Workspace() {
       <CreatePageModal open={creating} onClose={() => setCreating(false)} />
       <Modal open={!!toDelete} onClose={() => !deleting && setToDelete(null)} title="Delete this page?">
         <p className="text-[14px] text-ink-2">
-          <b className="text-ink">{toDelete?.title}</b> and its links, photos and settings will be removed{isDemo ? " from this browser" : ""}. {isDemo ? "" : `opsaky.com/${toDelete?.slug} will stop working.`} This cannot be undone.
+          <b className="text-ink">{toDelete?.title}</b> and its links, photos and settings will be removed{isDemo ? " from this browser" : ""}. {isDemo || !toDelete ? "" : `${displayUrl(toDelete.slug, false)} will stop working.`} This cannot be undone.
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <Btn variant="ghost" onClick={() => setToDelete(null)} disabled={deleting}>Keep it</Btn>

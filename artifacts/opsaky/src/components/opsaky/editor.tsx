@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, ColorField, IconBtn, Label, Modal, Range, Segmented, Skeleton, Switch, TextArea, TextInput, ToggleRow } from "./ui";
 import { PhoneFrame, PlatformIcon, Storefront, platformName } from "./storefront";
-import { copyText, displayUrl, HandleHint, pageUrl, useHandleCheck } from "./dashboard";
+import { copyText, HandleHint, useHandleCheck } from "./dashboard";
+import { displayUrl, pageUrl } from "@/lib/urls";
 
 const MAX_LINKS = 7;
 const MAX_GALLERY = 4;
@@ -372,6 +373,7 @@ function ShareKit({ open, onClose, page, dirty }: { open: boolean; onClose: () =
   const url = pageUrl(page.slug, isDemo);
   useEffect(() => {
     if (!open) return;
+    setQr("");
     let live = true;
     (async () => {
       try {

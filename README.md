@@ -100,7 +100,7 @@ For serverless PostgreSQL hosting, use your provider's recommended pooled Prisma
 - URL schemes are restricted to `http`, `https`, `mailto`, and `tel`; JavaScript URLs are never rendered.
 - Public pages are always checked against the owner's current approval status, not a cached approval result.
 - Account state refreshes while a signed-in dashboard remains open, so approvals and revocations reach other sessions.
-- Copy/share and QR codes use the **current app origin**. Opsaky does not assume you own `opsaky.com`. Configure that domain in your host if you own it.
+- All share URLs, displayed handle previews, copied links, and QR codes use **`window.location.origin`**. Social-preview URLs and canonical tags use the current request's forwarded host and protocol. Optional `NEXT_PUBLIC_APP_URL` (for example, your Vercel or custom-domain origin) is a fallback only when the current origin cannot be determined. No production domain is hardcoded. Keep this optional value consistent with your deployment; changing it requires a rebuild because Next.js inlines public environment variables.
 - Demo data is saved only in the current browser's local storage. It is not authentication, a live account, a production database, or public publication. Clearing site storage resets it.
 - Sample product photos are AI-generated example assets, not real merchants or real performance data.
 - Without external service credentials, live account and public-page operations explicitly report that setup is needed. The demo remains usable.
