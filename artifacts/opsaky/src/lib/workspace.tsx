@@ -94,7 +94,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       saveLocal(next, accounts); setPages(next);
       return page;
     }
-    const saved = toPage(await apiCreatePage({ title: page.title, slug: page.slug, config: { ...page.config }, published: false }));
+    const saved = toPage(await apiCreatePage({ title: page.title, slug: page.slug, config: { ...page.config }, published: true }));
     await refresh();
     return saved;
   }, [isDemo, pages, accounts, refresh]);
@@ -110,7 +110,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       saveLocal(next, accounts); setPages(next);
       return saved;
     }
-    const saved = toPage(await apiSavePage(page.id, { title: page.title, slug: page.slug, config: { ...page.config }, published: page.published }));
+    const saved = toPage(await apiSavePage(page.id, { title: page.title, slug: page.slug, config: { ...page.config }, published: true }));
     setPages(previous => previous.map(p => p.id === saved.id ? saved : p));
     return saved;
   }, [isDemo, pages, accounts]);

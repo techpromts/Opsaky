@@ -5,6 +5,7 @@ import { database } from "@/lib/server/db";
 import { appConfigured, authConfigured, identity, ensureAdmin, requireIdentity, requireApproved, requireAdmin, HttpError } from "@/lib/server/auth";
 import { activationSchema, pageSchema, statusSchema } from "@/lib/server/validation";
 import { defaultConfig, validSlug } from "@/lib/model";
+import { publishedPage } from "@/lib/server/public-page";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,10 +40,9 @@ async function handle(req: NextRequest, { params }: Context) {
     }
     if (resource === "public" && id && req.method === "GET") {
       if (!appConfigured()) throw new HttpError(503, "Live pages are not configured yet.");
-      const page = await database().page.findUnique({ where: { slug: id }, include: { owner: { select: { status: true } } } });
-      if (!page || !page.published || page.owner.status !== "APPROVED") throw new HttpError(404, "Page Not Active Yet");
-      const { owner: _, ownerId: __, ...publicPage } = page;
-      return json(publicPage);
+      const page = await publishedPage(id);
+      if (!page) throw new HttpError(404, "Page Not Active Yet");
+      return json(page);
     }
     if (resource === "handles" && id && req.method === "GET") {
       await requireIdentity();
@@ -93,7 +93,7 @@ async function handle(req: NextRequest, { params }: Context) {
           if (await tx.page.count({ where: { ownerId: account.id } }) >= 10) throw new HttpError(409, "10 / 10 Pages Used. Delete a page before creating another.");
           const reservation = await tx.account.findUnique({ where: { requestedSlug: input.slug } });
           if (reservation && reservation.id !== account.id) throw new HttpError(409, "This handle is reserved.");
-          return tx.page.create({ data: { ...input, config: input.config as unknown as Prisma.InputJsonValue, ownerId: account.id } });
+          return tx.page.create({ data: { ...input, published: true, config: input.config as unknown as Prisma.InputJsonValue, ownerId: account.id } });
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
         return json(page, 201);
       }
@@ -107,7 +107,7 @@ async function handle(req: NextRequest, { params }: Context) {
         const input = pageSchema.parse(await body(req));
         const reservation = await db.account.findUnique({ where: { requestedSlug: input.slug } });
         if (reservation && reservation.id !== account.id) throw new HttpError(409, "This handle is reserved.");
-        return json(await db.page.update({ where: { id }, data: { ...input, config: input.config as unknown as Prisma.InputJsonValue } }));
+        return json(await db.page.update({ where: { id }, data: { ...input, published: true, config: input.config as unknown as Prisma.InputJsonValue } }));
       }
     }
     throw new HttpError(404, "Not found.");

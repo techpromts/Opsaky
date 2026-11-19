@@ -7,6 +7,7 @@ import { PublicPage } from "@/components/opsaky/public-page";
 import { validSlug } from "@/lib/model";
 import { getRequestOrigin } from "@/lib/server/urls";
 
+// Read saved content and workspace approval on every visit, even for inactive slugs.
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ segments?: string[] }> }): Promise<Metadata> {
   const segments = (await params).segments ?? [];

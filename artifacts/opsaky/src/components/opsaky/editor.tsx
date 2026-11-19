@@ -16,7 +16,7 @@ import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, ColorField, IconBtn, Label, Modal, Range, Segmented, Skeleton, Switch, TextArea, TextInput, ToggleRow } from "./ui";
 import { PhoneFrame, PlatformIcon, Storefront, platformName } from "./storefront";
 import { copyText, HandleHint, useHandleCheck } from "./dashboard";
-import { displayUrl, pageUrl } from "@/lib/urls";
+import { pageUrl } from "@/lib/urls";
 
 const MAX_LINKS = 7;
 const MAX_GALLERY = 4;
@@ -270,7 +270,7 @@ function DesignTab({ c, set, apply }: { c: PageConfig; set: Set; apply: (p: Part
   );
 }
 
-function LayoutTab({ c, set, draft, setPublished }: { c: PageConfig; set: Set; draft: StorePage; setPublished: (v: boolean) => void }) {
+function LayoutTab({ c, set }: { c: PageConfig; set: Set }) {
   const blocks = [
     { id: "showcase", label: "Product showcase", sub: `${c.gallery.length} photo${c.gallery.length === 1 ? "" : "s"}`, icon: ImageIcon },
     { id: "links", label: "Action links", sub: `${c.links.filter((l) => l.active).length} active`, icon: Link2 },
@@ -309,7 +309,7 @@ function LayoutTab({ c, set, draft, setPublished }: { c: PageConfig; set: Set; d
       </Section>
       <Section title="Operations">
         <ToggleRow title="Open now" desc={c.showStatus ? "Shown on your page." : "Enable the status pill in Content to show this."} checked={c.isOpen} onChange={(v) => set("isOpen", v)} testId="switch-open-ops" />
-        <ToggleRow title="Mark page as ready" desc={`Saved with the page. Visibility at /${draft.slug} also depends on your account being approved.`} checked={draft.published} onChange={setPublished} testId="switch-published" />
+        <p className="mt-3 text-[12px] text-ink-2">Saved pages are automatically live when your workspace is approved. No separate publishing step is needed.</p>
       </Section>
     </div>
   );
@@ -390,8 +390,8 @@ function ShareKit({ open, onClose, page, dirty }: { open: boolean; onClose: () =
       {isDemo && <p className="mb-4 rounded-xl border border-dashed border-ink/30 px-3 py-2 text-[12px] text-ink-2">Demo pages are not published. This link and QR open a local preview that only works in this browser.</p>}
       {dirty && <p className="mb-4 rounded-xl bg-coral/10 px-3 py-2 text-[12px] text-coral-deep">You have unsaved changes. Save first so the link shows your latest version.</p>}
       <div className="flex items-center gap-2 rounded-2xl border border-line bg-white/80 p-1.5 pl-4">
-        <span className="truncate font-mono text-[12.5px]" data-testid="text-share-url">{displayUrl(page.slug, isDemo)}</span>
-        <Btn size="sm" className="ml-auto" onClick={() => copyText(url)} data-testid="button-copy-link"><Copy className="h-3.5 w-3.5" />Copy</Btn>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 break-all font-mono text-[12.5px] text-teal underline underline-offset-2" data-testid="text-share-url">{url}</a>
+        <Btn size="sm" className="shrink-0" onClick={() => copyText(url)} data-testid="button-copy-link"><Copy className="h-3.5 w-3.5" />Copy</Btn>
       </div>
       <div className="mt-5 flex flex-col items-center rounded-[24px] bg-white p-5">
         {!qr ? <Skeleton className="h-52 w-52" /> : qr === "error" ? <p className="py-16 text-sm text-stop">QR code could not be generated.</p> : <img src={qr} alt="QR code" className="h-52 w-52" data-testid="img-qr" />}
@@ -471,6 +471,9 @@ export function Editor({ id }: { id: string }) {
   if (!draft) return null;
 
   const c = draft.config;
+  // Sharing must refer to the persisted slug, not an unsaved handle edit.
+  const savedPage = source ?? draft;
+  const liveUrl = pageUrl(savedPage.slug, isDemo);
   const set: Set = (k, v) => setDraft((d) => (d ? { ...d, config: { ...d.config, [k]: v } } : d));
   const apply = (p: Partial<PageConfig>) => setDraft((d) => (d ? { ...d, config: { ...d.config, ...p } } : d));
 
@@ -519,6 +522,11 @@ export function Editor({ id }: { id: string }) {
             <Btn variant="coral" onClick={save} loading={saving} disabled={!dirty} data-testid="button-save"><Save className="h-4 w-4" />Save</Btn>
           </div>
         </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white/80 px-3 py-2">
+          <span className="shrink-0 text-[11px] font-semibold text-ink-2">{isDemo ? "Local preview" : "Live page"}</span>
+          <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 break-all font-mono text-[12px] text-teal underline underline-offset-2" data-testid="link-editor-live-url">{liveUrl}</a>
+          <Btn size="sm" className="shrink-0" onClick={() => copyText(liveUrl)} data-testid="button-copy-live-url"><Copy className="h-3.5 w-3.5" />Copy</Btn>
+        </div>
         {slugEdit && <div className="mt-1 pl-12"><HandleHint state={otherSlugs.has(slugDraft) ? "taken" : slugState} /></div>}
         {saveErr && <div className="mt-2 flex items-center gap-2 rounded-xl bg-stop/10 px-3 py-2 text-[13px] text-stop" data-testid="text-save-error"><AlertTriangle className="h-4 w-4 shrink-0" />{saveErr}<button className="ml-auto font-semibold underline" onClick={save}>Retry</button></div>}
         <div className="mt-3 flex gap-1 rounded-full bg-ink/5 p-1 lg:hidden">
@@ -547,7 +555,7 @@ export function Editor({ id }: { id: string }) {
           <div key={tab} className="rise" style={{ animationDuration: ".35s" }}>
             {tab === "content" && <ContentTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
             {tab === "design" && <DesignTab c={c} set={set} apply={apply} />}
-            {tab === "layout" && <LayoutTab c={c} set={set} draft={draft} setPublished={(v) => setDraft({ ...draft, published: v })} />}
+            {tab === "layout" && <LayoutTab c={c} set={set} />}
             {tab === "links" && <LinksTab c={c} set={set} />}
           </div>
         </div>
@@ -560,7 +568,7 @@ export function Editor({ id }: { id: string }) {
           </div>
         </aside>
       </div>
-      <ShareKit open={share} onClose={() => setShare(false)} page={draft} dirty={dirty} />
+      <ShareKit open={share} onClose={() => setShare(false)} page={savedPage} dirty={dirty} />
     </AppShell>
   );
 }
