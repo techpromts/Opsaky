@@ -1,0 +1,23 @@
+kind = "web"
+previewPath = "/"
+title = "Opsaky"
+description = "A universal bio-link, digital showcase, and mini-storefront builder with manual account approval and a live customization studio."
+version = "1.0.0"
+id = "artifacts/opsaky"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23425
+
+[services.development]
+run = "pnpm --filter @workspace/opsaky run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/opsaky", "run", "build" ]
+run = "pnpm --filter @workspace/opsaky run start"
+
+[services.env]
+PORT = "23425"
+BASE_PATH = "/"

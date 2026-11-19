@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Account {
+  id            String        @id @default(cuid())
+  clerkId       String        @unique
+  email         String
+  businessName  String
+  category      String
+  phone         String
+  requestedSlug String        @unique
+  status        AccountStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  pages         Page[]
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     Account  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String
+  slug      String   @unique
+  config    Json
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}

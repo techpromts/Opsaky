@@ -1,0 +1,218 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+paths:
+  /opsaky/session:
+    get:
+      operationId: getOpsakySession
+      responses:
+        "200":
+          description: Current account and setup state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OpsakySession" }
+  /opsaky/activation:
+    post:
+      operationId: requestActivation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActivationInput" }
+      responses:
+        "200":
+          description: Activation requested
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+  /opsaky/handles/{slug}:
+    get:
+      operationId: checkHandle
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Handle availability
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available: { type: boolean }
+  /opsaky/pages:
+    get:
+      operationId: listPages
+      responses:
+        "200":
+          description: Owned pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StorePage" }
+    post:
+      operationId: createPage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PageInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StorePage" }
+  /opsaky/pages/{id}:
+    put:
+      operationId: savePage
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PageInput" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StorePage" }
+    delete:
+      operationId: deletePage
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+  /opsaky/public/{slug}:
+    get:
+      operationId: getPublicPage
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Approved public page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StorePage" }
+  /opsaky/admin/accounts:
+    get:
+      operationId: listAccounts
+      responses:
+        "200":
+          description: Admin account list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Account" }
+  /opsaky/admin/accounts/{id}:
+    patch:
+      operationId: updateAccountStatus
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountStatusInput" }
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+components:
+  schemas:
+    AccountStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+    ActivationInput:
+      type: object
+      required: [businessName, category, phone, requestedSlug]
+      properties:
+        businessName: { type: string }
+        category: { type: string }
+        phone: { type: string }
+        requestedSlug: { type: string }
+    Account:
+      type: object
+      required: [id, email, businessName, category, phone, requestedSlug, status, pageCount]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        businessName: { type: string }
+        category: { type: string }
+        phone: { type: string }
+        requestedSlug: { type: string }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        pageCount: { type: integer }
+    OpsakySession:
+      type: object
+      required: [configured, signedIn, isAdmin, email, account]
+      properties:
+        configured: { type: boolean }
+        signedIn: { type: boolean }
+        isAdmin: { type: boolean }
+        email: { type: string }
+        account:
+          anyOf:
+            - { $ref: "#/components/schemas/Account" }
+            - { type: "null" }
+    PageInput:
+      type: object
+      required: [title, slug, config, published]
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        published: { type: boolean }
+        config:
+          type: object
+          additionalProperties: true
+    StorePage:
+      type: object
+      required: [id, title, slug, config, published, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        published: { type: boolean }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        config:
+          type: object
+          additionalProperties: true
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
