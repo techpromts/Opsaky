@@ -36,9 +36,13 @@ export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { c
     ...(showAdmin ? [{ href: adminPath, label: "Admin panel", icon: ShieldCheck, active: pathname === adminPath }] : []),
   ];
   return (
-    <div className="ops-canvas">
+    <div className="ops-canvas relative">
       {isDemo && <DemoBanner />}
-      <header className={cn("relative z-30 border-b border-white/60 bg-paper/75 backdrop-blur-2xl", hideMobileHeader && "hidden md:block")}>
+      {/* 
+        REMOVED `sticky top-0 z-30` 
+        Now using `relative z-20` so the header flows naturally with the document and scrolls away.
+      */}
+      <header className={cn("relative z-20 border-b border-white/60 bg-paper/75 backdrop-blur-2xl", hideMobileHeader && "hidden md:block")}>
         <div className={cn("mx-auto flex h-14 items-center gap-3 px-4 md:h-16 md:gap-4 md:px-6", wide ? "max-w-[1500px]" : "max-w-6xl")}>
           <Link href={isDemo ? "/demo" : "/"} data-testid="link-home"><Logo /></Link>
           <nav className="ml-2 hidden items-center gap-1 md:flex">
@@ -52,9 +56,9 @@ export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { c
           </nav>
           <div className="ml-auto flex items-center gap-2">
             {isDemo && (
-              <Link href="/" aria-label="← Back to Home" data-testid="link-back-to-home"
+              <Link href="/" aria-label="← Back" data-testid="link-back-to-home"
                 className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-white/85 px-3 text-[12px] font-bold text-ink shadow-sm transition hover:border-ink/30 hover:bg-white md:text-[13px]">
-                <ArrowLeft className="h-4 w-4" />Back to Home
+                <ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">Back to Home</span><span className="sm:hidden">Back</span>
               </Link>
             )}
             <div className="hidden items-center gap-2 md:flex">
@@ -102,7 +106,7 @@ export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { c
           </div>
         </div>
       )}
-      <div className={cn("relative z-10 mx-auto px-4 pb-20 sm:px-6", wide ? "max-w-[1500px]" : "max-w-6xl", mobileFooter && "pb-[calc(env(safe-area-inset-bottom)_+_6rem)] md:pb-20")}>{children}</div>
+      <div className={cn("relative z-10 mx-auto px-4 pb-20 sm:px-6 py-6 md:py-10", wide ? "max-w-[1500px]" : "max-w-6xl", mobileFooter && "pb-[calc(env(safe-area-inset-bottom)_+_6rem)] md:pb-20")}>{children}</div>
     </div>
   );
 }
