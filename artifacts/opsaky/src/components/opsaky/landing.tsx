@@ -105,7 +105,7 @@ export function Landing() {
           </div>
           <div className="rounded-[28px] bg-ink p-7 text-paper">
             <Palette className="h-6 w-6 text-lime" />
-            <h3 className="font-display mt-4 text-xl font-bold">Five presets, endless tuning</h3>
+            <h3 className="font-display mt-4 text-xl font-bold">Five presets, full custom control</h3>
             <p className="mt-2 text-[14px] text-paper/70">Luxury Noir to Clean Studio, then gradients, image backgrounds, glass and brutal cards.</p>
           </div>
           <div className="rounded-[28px] bg-coral p-7 text-white">

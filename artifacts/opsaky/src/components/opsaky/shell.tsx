@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FlaskConical, LayoutGrid, LogOut, MoreHorizontal, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, FlaskConical, LayoutGrid, LogOut, MoreHorizontal, ShieldCheck, X } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -22,7 +22,6 @@ export function DemoBanner() {
     <div data-testid="banner-demo" className="relative z-40 flex items-center justify-center gap-2 bg-ink px-4 py-2 text-center text-[12px] font-medium text-paper">
       <FlaskConical className="h-3.5 w-3.5 shrink-0 text-lime" />
       <span><b className="text-lime">Demo mode.</b> Everything here is stored only in this browser. Nothing is signed in, saved to a server, or published publicly.</span>
-      <Link href="/" className="ml-2 hidden shrink-0 underline decoration-lime/60 underline-offset-4 hover:text-lime sm:inline" data-testid="link-exit-demo">Exit demo</Link>
     </div>
   );
 }
@@ -51,22 +50,30 @@ export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { c
               </Link>
             ))}
           </nav>
-          <div className="ml-auto hidden items-center gap-2 md:flex">
-            {isDemo ? (
-              <span className="rounded-full border border-dashed border-ink/30 px-3 py-1 font-mono text-[11px] text-ink-2">local sample</span>
-            ) : ws.session.signedIn ? (
-              <>
-                <span className="hidden max-w-[220px] truncate font-mono text-[11.5px] text-ink-2 md:inline" data-testid="text-email">{ws.session.email}</span>
-                <button onClick={ws.signOut} data-testid="button-sign-out" className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition hover:bg-ink/5 hover:text-ink">
-                  <LogOut className="h-3.5 w-3.5" /><span className="hidden sm:inline">Sign out</span>
-                </button>
-              </>
-            ) : null}
+          <div className="ml-auto flex items-center gap-2">
+            {isDemo && (
+              <Link href="/" aria-label="← Back to Home" data-testid="link-back-to-home"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-white/85 px-3 text-[12px] font-bold text-ink shadow-sm transition hover:border-ink/30 hover:bg-white md:text-[13px]">
+                <ArrowLeft className="h-4 w-4" />Back to Home
+              </Link>
+            )}
+            <div className="hidden items-center gap-2 md:flex">
+              {isDemo ? (
+                <span className="rounded-full border border-dashed border-ink/30 px-3 py-1 font-mono text-[11px] text-ink-2">local sample</span>
+              ) : ws.session.signedIn ? (
+                <>
+                  <span className="hidden max-w-[220px] truncate font-mono text-[11.5px] text-ink-2 md:inline" data-testid="text-email">{ws.session.email}</span>
+                  <button onClick={ws.signOut} data-testid="button-sign-out" className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition hover:bg-ink/5 hover:text-ink">
+                    <LogOut className="h-3.5 w-3.5" /><span className="hidden sm:inline">Sign out</span>
+                  </button>
+                </>
+              ) : null}
+            </div>
+            <button type="button" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/65 text-ink md:hidden" data-testid="button-shell-menu">
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
           </div>
-          <button type="button" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}
-            className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/65 text-ink md:hidden" data-testid="button-shell-menu">
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
         </div>
       </header>
       {menuOpen && (
