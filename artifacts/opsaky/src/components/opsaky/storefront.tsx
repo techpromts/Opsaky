@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Clock, Globe, Mail, MapPin, Phone, Store } from "lucide-react";
+import { Globe, Mail, MapPin, Phone, Store } from "lucide-react";
 import { SiFacebook, SiInstagram, SiSnapchat, SiTiktok, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
 import type { PageConfig, SmartLink } from "@/lib/model";
 import { getBusinessStatus } from "@/lib/business-hours";
@@ -129,6 +129,20 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const font = FONT_STACKS[c.font];
   const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
 
+  // Sync document background color on public mobile viewports so iOS Safari bottom bar & overscroll never show a beige strip
+  useEffect(() => {
+    if (framed || typeof document === "undefined") return;
+    const prevBodyBg = document.body.style.backgroundColor;
+    const prevHtmlBg = document.documentElement.style.backgroundColor;
+    const targetBg = imageBackground ? "#0b0d0c" : c.background;
+    document.body.style.backgroundColor = targetBg;
+    document.documentElement.style.backgroundColor = targetBg;
+    return () => {
+      document.body.style.backgroundColor = prevBodyBg;
+      document.documentElement.style.backgroundColor = prevHtmlBg;
+    };
+  }, [framed, imageBackground, c.background]);
+
   // Liquid Glass / Glassmorphism surface style
   const glassStyle: CSSProperties = {
     background: rgba(c.surface, imageBackground ? 0.56 : 0.72),
@@ -141,11 +155,12 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
 
   const surface: CSSProperties =
     c.material === "border"
-      ? { background: c.surface, border: `2px solid ${c.textColor}`, boxShadow: `4px 4px 0 ${c.textColor}`, borderRadius: 12 }
+      ? { background: c.surface, border: `2px solid ${c.textColor}`, boxShadow: `4px 4px 0 ${c.textColor}`, borderRadius: 16 }
       : glassStyle;
 
-  const bg: CSSProperties =
-    c.backgroundMode === "gradient"
+  const bg: CSSProperties = imageBackground
+    ? { background: "transparent" }
+    : c.backgroundMode === "gradient"
       ? { background: `linear-gradient(${c.gradientAngle}deg, ${c.background}, ${c.gradientColor})` }
       : { background: c.background };
 
@@ -313,12 +328,12 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       className={cn("relative isolate w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
       style={{ ...bg, color: c.textColor, fontFamily: font }}
     >
-      {/* Full-viewport seamless background image */}
+      {/* Full-bleed edge-to-edge fixed background covering iOS Safari bottom bar & overscroll */}
       {imageBackground && (
         <div
           className={cn(
-            "pointer-events-none inset-0 -z-10 overflow-hidden",
-            framed ? "absolute h-full w-full" : "fixed h-[100lvh] w-full"
+            "pointer-events-none -z-10 overflow-hidden",
+            framed ? "absolute inset-0 h-full w-full" : "fixed -inset-y-16 inset-x-0 h-[calc(100lvh+8rem)] w-screen"
           )}
         >
           <img
@@ -343,7 +358,10 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         </div>
       )}
 
-      <main className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5 pb-12", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}>
+      <main
+        className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}
+        style={{ paddingBottom: framed ? "2.5rem" : "calc(env(safe-area-inset-bottom) + 4rem)" }}
+      >
         <header className="relative text-center">
           {/* Avatar / Logo floating slightly above the glass card */}
           <div className="relative z-10">
@@ -356,7 +374,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
             className={cn("relative px-6 pb-6", c.logoShape !== "cover" ? "-mt-10 pt-14" : "mt-4 pt-6")}
             style={glassStyle}
           >
-            {/* Subtle Editorial Category Eyebrow (no heavy pill box) */}
+            {/* Subtle Editorial Category Eyebrow */}
             {c.category && (
               <div
                 className="text-[10.5px] font-extrabold uppercase tracking-[0.22em]"
