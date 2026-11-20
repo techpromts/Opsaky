@@ -24,7 +24,7 @@ function validClockTime(time: string): boolean {
 export function isValidBusinessHours(schedule: BusinessHours, timeZone: string): boolean {
   return isValidTimeZone(timeZone) && BUSINESS_DAYS.every(({ id }) => {
     const day = schedule[id];
-    return Boolean(day && (day.closed || (validClockTime(day.open) && validClockTime(day.close))));
+    return Boolean(day && (day.closed || day.is24Hours || (validClockTime(day.open) && validClockTime(day.close))));
   });
 }
 
@@ -32,7 +32,12 @@ export function getBusinessStatus(
   schedule: BusinessHours,
   timeZone: string,
   now: Date = new Date(),
+  is24_7: boolean = false,
 ): { isOpen: boolean; hoursText: string; valid: boolean } {
+  if (is24_7) {
+    return { isOpen: true, hoursText: "Open 24/7", valid: true };
+  }
+
   if (!isValidBusinessHours(schedule, timeZone) || Number.isNaN(now.getTime())) {
     return { isOpen: false, hoursText: "Hours unavailable", valid: false };
   }
@@ -56,6 +61,11 @@ export function getBusinessStatus(
     const today = schedule[BUSINESS_DAYS[dayIndex]!.id];
     const previous = schedule[BUSINESS_DAYS[(dayIndex + 6) % 7]!.id];
     const currentMinutes = (hour % 24) * 60 + minute;
+
+    if (!today.closed && today.is24Hours) {
+      return { isOpen: true, hoursText: "Open 24 hours", valid: true };
+    }
+
     const openAt = minutesOfDay(today.open);
     const closeAt = minutesOfDay(today.close);
     let isOpen = false;
@@ -65,18 +75,28 @@ export function getBusinessStatus(
         ? currentMinutes >= openAt && currentMinutes < closeAt
         : currentMinutes >= openAt;
     }
+
     if (!isOpen && !previous.closed) {
-      const previousOpenAt = minutesOfDay(previous.open);
-      const previousCloseAt = minutesOfDay(previous.close);
-      isOpen = previousOpenAt > previousCloseAt && currentMinutes < previousCloseAt;
+      if (previous.is24Hours) {
+        isOpen = false;
+      } else {
+        const previousOpenAt = minutesOfDay(previous.open);
+        const previousCloseAt = minutesOfDay(previous.close);
+        isOpen = previousOpenAt > previousCloseAt && currentMinutes < previousCloseAt;
+      }
     }
+
     const previousCloseAt = minutesOfDay(previous.close);
-    const stillOpenFromYesterday = isOpen && !previous.closed
+    const stillOpenFromYesterday = isOpen && !previous.closed && !previous.is24Hours
       && minutesOfDay(previous.open) > previousCloseAt && currentMinutes < previousCloseAt;
 
     return {
       isOpen,
-      hoursText: stillOpenFromYesterday ? `Open until ${previous.close}` : today.closed ? "Closed today" : `${today.open}–${today.close}`,
+      hoursText: stillOpenFromYesterday
+        ? `Open until ${previous.close}`
+        : today.closed
+          ? "Closed today"
+          : `${today.open}–${today.close}`,
       valid: true,
     };
   } catch {
