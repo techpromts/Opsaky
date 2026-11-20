@@ -25,8 +25,10 @@ function ProductCategory({ category, config }: { category?: string; config: Page
   const label = category?.trim();
   if (!label) return null;
   return (
-    <span className="inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[10px] font-bold leading-tight"
-      style={{ background: config.accent, color: readableText(config.accent) }}>
+    <span
+      className="inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide shadow-sm"
+      style={{ background: config.accent, color: readableText(config.accent) }}
+    >
       {label}
     </span>
   );
@@ -41,11 +43,16 @@ function OrderOnWhatsApp({ digits, title, price, interactive, itemId }: {
 }) {
   const href = whatsAppOrderUrl(digits, title, price);
   return (
-    <a href={interactive ? href : "#"} target={interactive ? "_blank" : undefined} rel={interactive ? "noopener noreferrer" : undefined}
+    <a
+      href={interactive ? href : "#"}
+      target={interactive ? "_blank" : undefined}
+      rel={interactive ? "noopener noreferrer" : undefined}
       onClick={interactive ? undefined : (event) => event.preventDefault()}
-      className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#25D366] px-2 py-2 text-[10px] font-bold text-[#064e3b] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b] focus-visible:ring-offset-2"
-      data-testid={`sf-order-${itemId}`}>
-      <SiWhatsapp className="h-3.5 w-3.5 shrink-0" />Order on WhatsApp
+      className="mt-2.5 flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl bg-[#25D366] px-3 text-[12px] font-bold text-[#053b2c] shadow-[0_6px_16px_-6px_rgba(37,211,102,0.65)] transition-all duration-200 hover:brightness-105 active:scale-[0.97]"
+      data-testid={`sf-order-${itemId}`}
+    >
+      <SiWhatsapp className="h-4 w-4 shrink-0" />
+      <span>Order on WhatsApp</span>
     </a>
   );
 }
@@ -69,23 +76,39 @@ export function PlatformIcon({ url, className }: { url: string; className?: stri
 
 export function platformName(url: string) {
   const p = (detectPlatform(url) || "website").toLowerCase();
-  const names: Record<string, string> = { whatsapp: "WhatsApp", instagram: "Instagram", tiktok: "TikTok", facebook: "Facebook", snapchat: "Snapchat", x: "X", twitter: "X", youtube: "YouTube", maps: "Google Maps", map: "Google Maps", location: "Location", email: "Email", mail: "Email", phone: "Call", tel: "Call" };
+  const names: Record<string, string> = {
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    facebook: "Facebook",
+    snapchat: "Snapchat",
+    x: "X",
+    twitter: "X",
+    youtube: "YouTube",
+    maps: "Google Maps",
+    map: "Google Maps",
+    location: "Location",
+    email: "Email",
+    mail: "Email",
+    phone: "Call",
+    tel: "Call",
+  };
   return names[p] ?? "Website";
 }
 
 interface Props {
   title: string;
   config: PageConfig;
-  /** inside editor/thumbnail: fills parent, no min-h viewport */
   framed?: boolean;
   interactive?: boolean;
   footer?: ReactNode;
   hideFooter?: boolean;
 }
 
-export function Storefront({ title, config: c, framed, interactive = true, footer, hideFooter = false }: Props) {
+export function Storefront({ title, config: c, framed, interactive = true, footer, hideFooter = true }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState<number | null>(null);
+
   useEffect(() => {
     if (!c.businessHoursEnabled) { setClock(null); return; }
     const updateClock = () => setClock(Date.now());
@@ -93,51 +116,91 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     const timer = window.setInterval(updateClock, 60_000);
     return () => window.clearInterval(timer);
   }, [c.businessHoursEnabled]);
+
   const hoursStatus = c.businessHoursEnabled && clock !== null
     ? getBusinessStatus(c.businessHours, c.businessHoursTimezone, new Date(clock))
     : undefined;
+
   const btnText = c.buttonShape === "outline" ? c.buttonColor : readableText(c.buttonColor);
-  const radius = { pill: 999, rounded: 16, sharp: 2, outline: 999 }[c.buttonShape];
+  const radius = { pill: 999, rounded: 18, sharp: 6, outline: 999 }[c.buttonShape];
   const anim = c.animation === "lift" ? "sf-lift" : c.animation === "scale" ? "sf-scale" : "";
   const activeLinks = c.links.filter((l) => l.active && l.url.trim());
   const whatsappDigits = getWhatsAppDigits(c.links);
   const font = FONT_STACKS[c.font];
+  const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
+
+  // Liquid Glass / Glassmorphism surface style
+  const glassStyle: CSSProperties = {
+    background: rgba(c.surface, imageBackground ? 0.58 : 0.72),
+    backdropFilter: "blur(22px) saturate(160%)",
+    WebkitBackdropFilter: "blur(22px) saturate(160%)",
+    border: `1px solid ${rgba("#ffffff", 0.42)}`,
+    boxShadow: `0 16px 40px -20px ${rgba("#000000", 0.32)}, inset 0 1px 0 0 ${rgba("#ffffff", 0.5)}`,
+    borderRadius: 24,
+  };
 
   const surface: CSSProperties =
-    c.material === "glass"
-      ? { background: rgba(c.surface, 0.55), backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: `1px solid ${rgba("#ffffff", 0.35)}`, borderRadius: 20 }
-      : c.material === "border"
-        ? { background: c.surface, border: `2px solid ${c.textColor}`, boxShadow: `4px 4px 0 ${c.textColor}`, borderRadius: 6 }
-        : { background: c.surface, boxShadow: `0 14px 34px -18px ${rgba(c.textColor, 0.45)}`, borderRadius: 20 };
+    c.material === "border"
+      ? { background: c.surface, border: `2px solid ${c.textColor}`, boxShadow: `4px 4px 0 ${c.textColor}`, borderRadius: 12 }
+      : glassStyle;
 
   const bg: CSSProperties =
     c.backgroundMode === "gradient"
       ? { background: `linear-gradient(${c.gradientAngle}deg, ${c.background}, ${c.gradientColor})` }
       : { background: c.background };
-  const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
 
   const linkStyle = (): CSSProperties =>
     c.buttonShape === "outline"
-      ? { borderRadius: radius, border: `1.5px solid ${c.buttonColor}`, color: c.buttonColor, background: rgba(c.surface, 0.25), backdropFilter: "blur(8px)" }
-      : { borderRadius: radius, background: c.buttonColor, color: btnText, ...(c.material === "border" ? { border: `2px solid ${c.textColor}`, boxShadow: `3px 3px 0 ${c.textColor}` } : {}) };
+      ? {
+          borderRadius: radius,
+          border: `1.5px solid ${rgba("#ffffff", 0.55)}`,
+          color: c.textColor,
+          background: rgba(c.surface, 0.45),
+          backdropFilter: "blur(18px) saturate(150%)",
+          WebkitBackdropFilter: "blur(18px) saturate(150%)",
+          boxShadow: `0 8px 24px -12px ${rgba("#000000", 0.25)}, inset 0 1px 0 0 ${rgba("#ffffff", 0.4)}`,
+        }
+      : {
+          borderRadius: radius,
+          background: c.buttonColor,
+          color: btnText,
+          boxShadow: `0 10px 24px -10px ${rgba(c.buttonColor, 0.55)}, inset 0 1px 0 0 ${rgba("#ffffff", 0.25)}`,
+          ...(c.material === "border" ? { border: `2px solid ${c.textColor}`, boxShadow: `3px 3px 0 ${c.textColor}` } : {}),
+        };
 
   const announcement = c.showAnnouncement && c.announcement.trim() && (
-    <div className="relative z-10 overflow-hidden py-2 text-center text-[12px] font-semibold" style={{ background: c.accent, color: readableText(c.accent) }} data-testid="sf-announcement">
+    <div
+      className="relative z-20 overflow-hidden py-2 text-center text-[12px] font-semibold backdrop-blur-md"
+      style={{ background: rgba(c.accent, 0.92), color: readableText(c.accent) }}
+      data-testid="sf-announcement"
+    >
       {c.announcementMode === "scroll" ? (
         <div className="marquee gap-12">
           {[0, 1, 2, 3].map((i) => <span key={i} className="px-6">{c.announcement}</span>)}
         </div>
-      ) : <span className="px-4">{c.announcement}</span>}
+      ) : (
+        <span className="px-4">{c.announcement}</span>
+      )}
     </div>
   );
 
   const logo = c.logo && c.logoShape !== "cover" && (
-    <img src={c.logo} alt={`${title} logo`} className={cn("mx-auto h-24 w-24 object-cover", c.logoShape === "circle" ? "rounded-full" : "rounded-[22px]")}
-      style={{ boxShadow: `0 10px 30px -12px ${rgba(c.textColor, 0.6)}`, border: `3px solid ${c.surface}` }} />
+    <img
+      src={c.logo}
+      alt={`${title} logo`}
+      className={cn("mx-auto h-24 w-24 object-cover", c.logoShape === "circle" ? "rounded-full" : "rounded-[24px]")}
+      style={{
+        boxShadow: `0 12px 32px -10px ${rgba("#000000", 0.45)}`,
+        border: `3px solid ${rgba("#ffffff", 0.75)}`,
+      }}
+    />
   );
+
   const initialBadge = !c.logo && (
-    <div className={cn("mx-auto flex h-20 w-20 items-center justify-center text-3xl font-bold", c.logoShape === "circle" ? "rounded-full" : "rounded-[22px]")}
-      style={{ background: c.accent, color: readableText(c.accent), fontFamily: font }}>
+    <div
+      className={cn("mx-auto flex h-20 w-20 items-center justify-center text-3xl font-bold shadow-lg", c.logoShape === "circle" ? "rounded-full" : "rounded-[24px]")}
+      style={{ background: c.accent, color: readableText(c.accent), fontFamily: font, border: `2px solid ${rgba("#ffffff", 0.5)}` }}
+    >
       {(title || "O").trim().charAt(0).toUpperCase()}
     </div>
   );
@@ -145,50 +208,72 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const gallery = c.gallery.length > 0 && (
     <section data-testid="sf-gallery">
       {c.galleryMode === "carousel" && (
-        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1">
+        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
           {c.gallery.map((g) => (
-            <figure key={g.id} className="w-[72%] shrink-0 snap-center overflow-hidden" style={surface}>
+            <figure key={g.id} className="w-[74%] shrink-0 snap-center overflow-hidden transition-transform duration-300" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[4/5] w-full object-cover" />}
-              {(g.category || g.title || g.price || whatsappDigits) && <figcaption className="px-3 py-2.5 text-[13px]">
-                <div className="flex min-w-0 items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <ProductCategory category={g.category} config={c} />
-                    {g.title && <span className="block truncate font-semibold">{g.title}</span>}
+              {(g.category || g.title || g.price || whatsappDigits) && (
+                <figcaption className="p-3.5 text-[13px]">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <ProductCategory category={g.category} config={c} />
+                      {g.title && <span className="block truncate text-[14px] font-bold">{g.title}</span>}
+                    </div>
+                    {g.price && (
+                      <span
+                        className="shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold"
+                        style={{ background: rgba(c.accent, 0.16), color: c.accent }}
+                      >
+                        {g.price}
+                      </span>
+                    )}
                   </div>
-                  {g.price && <span className="shrink-0 font-bold" style={{ color: c.accent }}>{g.price}</span>}
-                </div>
-                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
-              </figcaption>}
+                  {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
+                </figcaption>
+              )}
             </figure>
           ))}
         </div>
       )}
       {c.galleryMode === "grid" && (
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-3">
           {c.gallery.map((g) => (
-            <figure key={g.id} className="relative overflow-hidden" style={surface}>
+            <figure key={g.id} className="relative flex flex-col justify-between overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-square w-full object-cover" />}
-              {(g.category || g.title || g.price || whatsappDigits) && <figcaption className="px-2.5 py-2 text-[12px]">
-                <ProductCategory category={g.category} config={c} />
-                <div className="truncate font-semibold">{g.title}</div>
-                {g.price && <div className="font-bold" style={{ color: c.accent }}>{g.price}</div>}
-                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
-              </figcaption>}
+              {(g.category || g.title || g.price || whatsappDigits) && (
+                <figcaption className="flex flex-1 flex-col justify-between p-3 text-[12px]">
+                  <div className="space-y-1">
+                    <ProductCategory category={g.category} config={c} />
+                    {g.title && <div className="line-clamp-2 text-[13px] font-bold leading-snug">{g.title}</div>}
+                    {g.price && <div className="font-extrabold" style={{ color: c.accent }}>{g.price}</div>}
+                  </div>
+                  {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
+                </figcaption>
+              )}
             </figure>
           ))}
         </div>
       )}
       {c.galleryMode === "featured" && (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {c.gallery.map((g) => (
             <figure key={g.id} className="relative overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[16/10] w-full object-cover" />}
-              {g.price && <span className="absolute right-3 top-3 rounded-full px-3 py-1 text-[12px] font-bold shadow-lg" style={{ background: c.accent, color: readableText(c.accent) }}>{g.price}</span>}
+              {g.price && (
+                <span
+                  className="absolute right-3 top-3 rounded-full px-3 py-1 text-[12px] font-extrabold shadow-lg backdrop-blur-md"
+                  style={{ background: c.accent, color: readableText(c.accent) }}
+                >
+                  {g.price}
+                </span>
+              )}
               {g.category && <span className="absolute left-3 top-3"><ProductCategory category={g.category} config={c} /></span>}
-              {(g.title || whatsappDigits) && <figcaption className="px-4 py-3 text-[14px] font-semibold">
-                {g.title && <div>{g.title}</div>}
-                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
-              </figcaption>}
+              {(g.title || whatsappDigits) && (
+                <figcaption className="p-4 text-[14px] font-bold">
+                  {g.title && <div className="text-[15px]">{g.title}</div>}
+                  {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
+                </figcaption>
+              )}
             </figure>
           ))}
         </div>
@@ -199,9 +284,19 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const links = activeLinks.length > 0 && (
     <nav className="space-y-2.5" data-testid="sf-links">
       {activeLinks.map((l: SmartLink) => (
-        <a key={l.id} href={interactive ? safeHref(l.url, l.message) : undefined} target="_blank" rel="noopener noreferrer"
-          onClick={interactive ? undefined : (e) => e.preventDefault()} data-testid={`sf-link-${l.id}`}
-          className={cn("relative flex h-[52px] items-center justify-center px-12 text-[14.5px] font-semibold", anim)} style={linkStyle()}>
+        <a
+          key={l.id}
+          href={interactive ? safeHref(l.url, l.message) : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={interactive ? undefined : (e) => e.preventDefault()}
+          data-testid={`sf-link-${l.id}`}
+          className={cn(
+            "relative flex h-[54px] items-center justify-center px-12 text-[14.5px] font-bold transition-transform duration-200 active:scale-[0.98]",
+            anim
+          )}
+          style={linkStyle()}
+        >
           <span className="absolute left-4 opacity-90"><PlatformIcon url={l.url} /></span>
           <span className="truncate">{l.label || platformName(l.url)}</span>
         </a>
@@ -209,97 +304,158 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     </nav>
   );
 
+  const isOpenNow = c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen;
+
   return (
-    <div ref={scrollRef} className={cn("relative isolate w-full overflow-hidden", framed ? "min-h-full" : "min-h-screen min-h-[100dvh]")} style={{ ...bg, color: c.textColor, fontFamily: font }}>
+    <div
+      ref={scrollRef}
+      className={cn("relative isolate w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
+      style={{ ...bg, color: c.textColor, fontFamily: font }}
+    >
+      {/* Full-viewport seamless background image (no hard edges when scrolling) */}
       {imageBackground && (
-        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <img src={c.backgroundImage} alt="" className="absolute -inset-[12%] h-[124%] w-[124%] object-cover"
-            style={{ filter: `blur(${c.blur}px)` }} />
-          <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${c.overlay / 100})` }} />
-          <div className="absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(to bottom, ${rgba(c.background, 0.85)}, transparent)` }} />
-          <div className="absolute inset-x-0 bottom-0 h-48" style={{ background: `linear-gradient(to top, ${rgba(c.background, 0.92)}, transparent)` }} />
+        <div
+          className={cn(
+            "pointer-events-none inset-0 -z-10 overflow-hidden",
+            framed ? "absolute h-full w-full" : "fixed h-[100lvh] w-full"
+          )}
+        >
+          <img
+            src={c.backgroundImage}
+            alt=""
+            className="h-full w-full scale-110 object-cover object-center"
+            style={{ filter: `blur(${c.blur}px)` }}
+          />
+          <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
         </div>
       )}
+
       {announcement}
+
       {c.logo && c.logoShape === "cover" && (
         <div className="relative h-44 w-full overflow-hidden">
           <img src={c.logo} alt={`${title} cover`} className="h-full w-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 h-16" style={{ background: `linear-gradient(transparent, ${rgba(c.background, c.backgroundMode === "image" ? 0 : 0.9)})` }} />
+          <div
+            className="absolute inset-x-0 bottom-0 h-20"
+            style={{ background: `linear-gradient(transparent, ${rgba(c.background, imageBackground ? 0 : 0.85)})` }}
+          />
         </div>
       )}
-      <main className={cn("mx-auto w-full max-w-[480px] px-5 pb-10", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}>
+
+      <main className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5 pb-12", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}>
         <header className="relative text-center">
-          {logo}{c.logoShape !== "cover" && initialBadge}
-          <div className={cn("mt-4", imageBackground && "rounded-[28px] px-4 py-5")}
-            style={imageBackground ? {
-              background: rgba(c.surface, 0.82),
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-              border: `1px solid ${rgba(c.textColor, 0.12)}`,
-              boxShadow: `0 18px 44px -24px ${rgba(c.textColor, 0.55)}`,
-            } : undefined}>
+          {logo}
+          {c.logoShape !== "cover" && initialBadge}
+
+          {/* Liquid Glass Header Card */}
+          <div className="mt-4 px-5 py-6" style={glassStyle}>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {c.category && <span className="rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ background: rgba(c.accent, 0.14), color: c.accent }}>{c.category}</span>}
+              {c.category && (
+                <span
+                  className="rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em]"
+                  style={{ background: rgba(c.accent, 0.16), color: c.accent }}
+                >
+                  {c.category}
+                </span>
+              )}
               {(c.businessHoursEnabled || c.showStatus) && (
-                <span data-testid="sf-status" className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                <span
+                  data-testid="sf-status"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em]"
                   style={{
-                    background: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "rgba(31,157,91,.14)" : "rgba(117,128,121,.16)",
-                    color: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "#168852" : "#68736c",
-                  }}>
-                  <span className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "#168852" : "#68736c" }} />
+                    background: isOpenNow ? "rgba(22, 163, 74, 0.18)" : "rgba(220, 38, 38, 0.16)",
+                    color: isOpenNow ? "#15803d" : "#b91c1c",
+                  }}
+                >
+                  <span
+                    className={cn("h-1.5 w-1.5 rounded-full", isOpenNow && "animate-pulse")}
+                    style={{ background: isOpenNow ? "#16a34a" : "#dc2626" }}
+                  />
                   {c.businessHoursEnabled
-                    ? hoursStatus ? (hoursStatus.valid ? (hoursStatus.isOpen ? "Open Now" : "Closed") : "Hours unavailable") : "Checking hours"
-                    : c.isOpen ? "Open Now" : "Closed"}
+                    ? hoursStatus
+                      ? hoursStatus.valid
+                        ? hoursStatus.isOpen
+                          ? "Open Now"
+                          : "Closed"
+                        : "Hours unavailable"
+                      : "Checking hours"
+                    : c.isOpen
+                      ? "Open Now"
+                      : "Closed"}
                 </span>
               )}
               {c.businessHoursEnabled && hoursStatus?.valid && (
-                <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-semibold" data-testid="sf-hours-text">
+                <span
+                  className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold"
+                  style={{ background: rgba("#ffffff", 0.55) }}
+                  data-testid="sf-hours-text"
+                >
                   {hoursStatus.hoursText}
                 </span>
               )}
             </div>
-            <h1 className="mt-3 font-bold leading-[1.05]" style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}>{title || "Untitled page"}</h1>
-            {c.bio && <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed opacity-80">{c.bio}</p>}
+
+            <h1
+              className="mt-3 font-extrabold leading-[1.08]"
+              style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}
+            >
+              {title || "Untitled page"}
+            </h1>
+
+            {c.bio && <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed opacity-85">{c.bio}</p>}
+
             {((c.showPhone && c.phone) || (c.showEmail && c.email)) && (
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {c.showPhone && c.phone && (
-                  <a href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
-                    <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.phone}
+                  <a
+                    href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
+                    className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-bold transition active:scale-95", anim)}
+                    style={{ background: rgba("#ffffff", 0.55), border: `1px solid ${rgba("#ffffff", 0.6)}` }}
+                  >
+                    <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />
+                    {c.phone}
                   </a>
                 )}
                 {c.showEmail && c.email && (
-                  <a href={interactive ? `mailto:${c.email}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
-                    <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.email}
+                  <a
+                    href={interactive ? `mailto:${c.email}` : undefined}
+                    className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-bold transition active:scale-95", anim)}
+                    style={{ background: rgba("#ffffff", 0.55), border: `1px solid ${rgba("#ffffff", 0.6)}` }}
+                  >
+                    <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />
+                    {c.email}
                   </a>
                 )}
               </div>
             )}
           </div>
         </header>
-        <div className="mt-7 space-y-6">
+
+        <div className="mt-6 space-y-6">
           {c.showcaseFirst ? <>{gallery}{links}</> : <>{links}{gallery}</>}
           {!gallery && !links && (
-            <div className="rounded-2xl border border-dashed px-4 py-8 text-center text-[13px] opacity-60" style={{ borderColor: rgba(c.textColor, 0.3) }}>
+            <div className="rounded-3xl border border-dashed px-4 py-8 text-center text-[13px] opacity-60" style={{ borderColor: rgba(c.textColor, 0.3) }}>
               Links and showcase items will appear here.
             </div>
           )}
         </div>
-        {!hideFooter && <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
-          {footer ?? "Powered by Opsaky"}
-        </footer>}
+
+        {!hideFooter && footer && (
+          <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
+            {footer}
+          </footer>
+        )}
       </main>
     </div>
   );
 }
 
-/** Scaled-down, non-interactive thumbnail of a storefront. */
 export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { title: string; config: PageConfig; height?: number; scale?: number }) {
   const w = 390;
   return (
     <div className="relative overflow-hidden" style={{ height }}>
       <div className="pointer-events-none absolute left-1/2 top-0 origin-top" style={{ width: w, height: height / scale, transform: `translateX(-50%) scale(${scale})` }}>
-        <Storefront title={title} config={config} framed interactive={false} />
+        <Storefront title={title} config={config} framed interactive={false} hideFooter />
       </div>
     </div>
   );
