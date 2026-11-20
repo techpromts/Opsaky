@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FlaskConical, LayoutGrid, LogOut, ShieldCheck } from "lucide-react";
+import { FlaskConical, LayoutGrid, LogOut, MoreHorizontal, ShieldCheck, X } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -27,8 +27,9 @@ export function DemoBanner() {
   );
 }
 
-export function AppShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
+export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { children: ReactNode; wide?: boolean; hideMobileHeader?: boolean; mobileFooter?: boolean }) {
   const ws = useWorkspace();
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isDemo, base, adminPath, pathname } = useMode();
   const showAdmin = isDemo || ws.session.isAdmin;
   const nav = [
@@ -38,10 +39,10 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
   return (
     <div className="ops-canvas">
       {isDemo && <DemoBanner />}
-      <header className="sticky top-0 z-30 border-b border-white/60 bg-paper/70 backdrop-blur-xl">
-        <div className={cn("mx-auto flex h-16 items-center gap-4 px-4 sm:px-6", wide ? "max-w-[1500px]" : "max-w-6xl")}>
+      <header className={cn("sticky top-0 z-30 border-b border-white/60 bg-paper/75 backdrop-blur-2xl", hideMobileHeader && "hidden md:block")}>
+        <div className={cn("mx-auto flex h-14 items-center gap-3 px-4 md:h-16 md:gap-4 md:px-6", wide ? "max-w-[1500px]" : "max-w-6xl")}>
           <Link href={isDemo ? "/demo" : "/"} data-testid="link-home"><Logo /></Link>
-          <nav className="ml-2 flex items-center gap-1">
+          <nav className="ml-2 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
               <Link key={n.href} href={n.href} data-testid={`link-nav-${n.label.toLowerCase().replace(/\s/g, "-")}`}
                 className={cn("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition",
@@ -50,7 +51,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto hidden items-center gap-2 md:flex">
             {isDemo ? (
               <span className="rounded-full border border-dashed border-ink/30 px-3 py-1 font-mono text-[11px] text-ink-2">local sample</span>
             ) : ws.session.signedIn ? (
@@ -62,9 +63,39 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
               </>
             ) : null}
           </div>
+          <button type="button" aria-label="Open menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}
+            className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/65 text-ink md:hidden" data-testid="button-shell-menu">
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
         </div>
       </header>
-      <div className={cn("relative z-10 mx-auto px-4 pb-20 sm:px-6", wide ? "max-w-[1500px]" : "max-w-6xl")}>{children}</div>
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" data-testid="drawer-shell-menu">
+          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-white/80 bg-paper/95 p-5 shadow-2xl backdrop-blur-2xl"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-lg font-bold">Menu</h2>
+              <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-ink/5" data-testid="button-close-shell-menu"><X className="h-4 w-4" /></button>
+            </div>
+            <nav className="space-y-2">
+              {nav.map((item) => (
+                <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} data-testid={`mobile-link-nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
+                  className={cn("flex min-h-12 items-center gap-3 rounded-2xl px-4 text-sm font-semibold", item.active ? "bg-ink text-paper" : "bg-white/70 text-ink-2")}>
+                  <item.icon className="h-4 w-4" />{item.label}
+                </Link>
+              ))}
+              {isDemo && <div className="rounded-2xl border border-dashed border-ink/20 px-4 py-3 text-xs text-ink-2">Demo changes stay in this browser.</div>}
+              {!isDemo && ws.session.signedIn && (
+                <button type="button" onClick={() => { setMenuOpen(false); ws.signOut(); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/70 px-4 text-sm font-semibold text-ink-2" data-testid="mobile-button-sign-out">
+                  <LogOut className="h-4 w-4" />Sign out
+                </button>
+              )}
+            </nav>
+          </div>
+        </div>
+      )}
+      <div className={cn("relative z-10 mx-auto px-4 pb-20 sm:px-6", wide ? "max-w-[1500px]" : "max-w-6xl", mobileFooter && "pb-[calc(env(safe-area-inset-bottom)_+_6rem)] md:pb-20")}>{children}</div>
     </div>
   );
 }

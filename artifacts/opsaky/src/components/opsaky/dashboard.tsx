@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X,
+  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { CATEGORIES, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
@@ -298,6 +299,7 @@ function CreatePageModal({ open, onClose }: { open: boolean; onClose: () => void
 function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => void; index: number }) {
   const { isDemo, base } = useMode();
   const router = useRouter();
+  const [moreOpen, setMoreOpen] = useState(false);
   const linkCount = page.config.links.filter((l) => l.active).length;
   return (
     <article className="group rise overflow-hidden rounded-[28px] border border-white/70 bg-white/50 shadow-[0_20px_50px_-30px_rgba(23,32,30,.5)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-30px_rgba(23,32,30,.6)]"
@@ -313,15 +315,15 @@ function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => 
           <Pencil className="h-3 w-3" /> Open studio
         </span>
       </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="p-5">
+        <div className="flex flex-col items-start justify-between gap-2 sm:flex-row">
           <div className="min-w-0">
             <h3 className="font-display truncate text-lg font-bold" data-testid={`text-title-${page.id}`}>{page.title}</h3>
             <p className="truncate font-mono text-[11.5px] text-muted">/{page.slug}</p>
           </div>
           <span className="shrink-0 rounded-full bg-paper-2 px-2 py-0.5 font-mono text-[10.5px] text-ink-2">{linkCount}/7 links · {page.config.gallery.length}/4 items</span>
         </div>
-        <div className="mt-4 flex items-center gap-1.5">
+        <div className="mt-4 hidden items-center gap-1.5 md:flex">
           <Link href={`${base}/edit/${page.id}`} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink text-[13px] font-semibold text-paper transition hover:bg-[#24302d]" data-testid={`button-edit-${page.id}`}>
             <Pencil className="h-3.5 w-3.5" /> Edit
           </Link>
@@ -337,7 +339,34 @@ function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => 
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
+        <div className="mt-4 flex items-center gap-2 md:hidden">
+          <Link href={`${base}/edit/${page.id}`} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-ink text-[13px] font-semibold text-paper" data-testid={`button-edit-mobile-${page.id}`}>
+            <Pencil className="h-4 w-4" />Edit page
+          </Link>
+          <button type="button" aria-label={`More actions for ${page.title}`} aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-line bg-white/75" data-testid={`button-more-${page.id}`}>
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        </div>
       </div>
+      {moreOpen && createPortal((
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label={`Actions for ${page.title}`} data-testid={`drawer-page-${page.id}`}>
+          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close page actions" onClick={() => setMoreOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-white/80 bg-paper/95 p-5 shadow-2xl backdrop-blur-2xl" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="min-w-0"><h2 className="font-display text-lg font-bold">Page actions</h2><p className="truncate font-mono text-[11px] text-muted">/{page.slug}</p></div>
+              <button type="button" aria-label="Close page actions" onClick={() => setMoreOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-2">
+              <button type="button" onClick={() => { setMoreOpen(false); void copyText(pageUrl(page.slug, isDemo), isDemo ? "Local preview link copied (this browser only)" : "Page link copied"); }}
+                className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid={`menu-copy-${page.id}`}><Copy className="h-4 w-4" />Copy page URL</button>
+              <a href={pageUrl(page.slug, isDemo)} target="_blank" rel="noreferrer" onClick={() => setMoreOpen(false)}
+                className="flex min-h-12 items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid={`menu-open-${page.id}`}><ExternalLink className="h-4 w-4" />{isDemo ? "Open local preview" : "Open public page"}</a>
+              <button type="button" onClick={() => { setMoreOpen(false); onDelete(); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-stop/5 px-4 text-sm font-semibold text-stop" data-testid={`menu-delete-${page.id}`}><Trash2 className="h-4 w-4" />Delete page</button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </article>
   );
 }

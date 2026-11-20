@@ -74,7 +74,7 @@ export function Admin() {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="flex gap-1 rounded-full bg-ink/5 p-1">
+        <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-full bg-ink/5 p-1">
           {(["ALL", "PENDING", "APPROVED", "REJECTED"] as const).map((s) => (
             <button key={s} onClick={() => setFilter(s)} data-testid={`filter-status-${s.toLowerCase()}`}
               className={cn("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold capitalize transition", filter === s ? "bg-ink text-paper" : "text-ink-2 hover:bg-white/70")}>
@@ -127,14 +127,14 @@ export function Admin() {
               </tbody>
             </table>
           </div>
-          <div className="mt-6 space-y-3 lg:hidden">
+          <div className="mt-6 space-y-4 lg:hidden">
             {rows.map((a) => (
-              <div key={a.id} className="glass rounded-[24px] p-4" data-testid={`card-account-${a.id}`}>
+              <div key={a.id} className="glass rounded-[24px] p-5" data-testid={`card-account-${a.id}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><div className="font-display truncate text-lg font-bold">{a.businessName}</div><div className="truncate font-mono text-[11.5px] text-muted">{a.email}</div></div>
                   <StatusBadge status={a.status} />
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-[12px]">
                   <div><dt className="text-muted">Category</dt><dd className="font-semibold">{a.category}</dd></div>
                   <div><dt className="text-muted">Handle</dt><dd className="font-mono text-teal">/{a.requestedSlug}</dd></div>
                   <div><dt className="text-muted">Phone</dt><dd className="font-mono">{a.phone}</dd></div>

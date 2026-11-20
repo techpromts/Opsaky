@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, Check, Circle, Copy, Download, Eye, EyeOff, Image as ImageIcon, LayoutPanelTop,
-  Link2, Loader2, Palette, Plus, QrCode, RectangleHorizontal, Save, Smartphone, Square, SlidersHorizontal, Trash2, Type, Upload, X,
+  AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Circle, Copy, Download, Eye, EyeOff, Image as ImageIcon, LayoutPanelTop,
+  Link2, Loader2, MoreHorizontal, Palette, Plus, QrCode, RectangleHorizontal, Save, Smartphone, Square, SlidersHorizontal, Trash2, Type, Upload, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { CATEGORIES, THEMES, slugify, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
@@ -17,6 +17,7 @@ import { Btn, ColorField, IconBtn, Label, Modal, Range, Segmented, Skeleton, Swi
 import { PhoneFrame, PlatformIcon, Storefront, platformName } from "./storefront";
 import { copyText, HandleHint, useHandleCheck } from "./dashboard";
 import { pageUrl } from "@/lib/urls";
+import { LogoMark } from "./logo";
 
 const MAX_LINKS = 7;
 const MAX_GALLERY = 4;
@@ -48,19 +49,25 @@ const TABS: { id: Tab; label: string; icon: typeof Type }[] = [
   { id: "layout", label: "Layout & Operations", icon: LayoutPanelTop },
   { id: "links", label: "Links", icon: Link2 },
 ];
+const MOBILE_SECTIONS: { id: Tab; title: string; summary: string }[] = [
+  { id: "content", title: "1. Brand & Identity", summary: "Logo, page title, contact and status" },
+  { id: "design", title: "2. Theme & Colors", summary: "Background, palette and typography" },
+  { id: "links", title: "3. Links & Actions", summary: "Ways customers can reach you" },
+  { id: "layout", title: "4. Products / Showcase", summary: "Photos, product details and layout" },
+];
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 function Section({ title, desc, children, aside }: { title: string; desc?: string; children: ReactNode; aside?: ReactNode }) {
   return (
-    <section className="rounded-[24px] border border-white/70 bg-white/45 p-5 backdrop-blur">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <section className="rounded-[24px] border border-white/75 bg-white/55 p-5 shadow-[0_10px_30px_-24px_rgba(23,32,30,.35)] backdrop-blur">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-[17px] font-bold text-ink">{title}</h3>
           {desc && <p className="mt-0.5 text-[12.5px] text-muted">{desc}</p>}
         </div>
         {aside}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-5">{children}</div>
     </section>
   );
 }
@@ -103,11 +110,12 @@ function useUploader() {
 /* ---------------- Tabs ---------------- */
 type Set = <K extends keyof PageConfig>(k: K, v: PageConfig[K]) => void;
 
-function ContentTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set }) {
+function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set; section?: "all" | "brand" | "showcase" }) {
   const up = useUploader();
   const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {section !== "showcase" && <>
       <Section title="Brand" desc="Logo, name and the line people read first.">
         <div className="flex items-center gap-4">
           <div className={cn("flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden border border-line bg-paper-2", c.logoShape === "circle" ? "rounded-full" : c.logoShape === "rounded" ? "rounded-2xl" : "rounded-lg w-28")}>
@@ -166,8 +174,9 @@ function ContentTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (
           </div>
         </div>
       </Section>
+      </>}
 
-      <Section title="Showcase gallery" desc="Your best four photos, with optional title and price." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
+      {section !== "brand" && <Section title="Showcase gallery" desc="Your best four photos, with optional title and price." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
         <div className="grid gap-3 sm:grid-cols-2">
           {c.gallery.map((g, i) => (
             <div key={g.id} className="rounded-2xl border border-line bg-white/70 p-2.5" data-testid={`gallery-item-${i}`}>
@@ -196,7 +205,7 @@ function ContentTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (
             </label>
           )}
         </div>
-      </Section>
+      </Section>}
     </div>
   );
 }
@@ -395,6 +404,15 @@ function LinksTab({ c, set }: { c: PageConfig; set: Set }) {
   );
 }
 
+function ShowcaseTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set }) {
+  return (
+    <div className="space-y-5">
+      <ContentTab draft={draft} setTitle={setTitle} c={c} set={set} section="showcase" />
+      <LayoutTab c={c} set={set} />
+    </div>
+  );
+}
+
 /* ---------------- Share kit ---------------- */
 function ShareKit({ open, onClose, page, dirty }: { open: boolean; onClose: () => void; page: StorePage; dirty: boolean }) {
   const { isDemo } = useMode();
@@ -447,6 +465,8 @@ export function Editor({ id }: { id: string }) {
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [share, setShare] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [openSection, setOpenSection] = useState<Tab | null>("content");
   const [slugEdit, setSlugEdit] = useState(false);
   const [slugDraft, setSlugDraft] = useState("");
   const initFor = useRef<string | null>(null);
@@ -480,14 +500,14 @@ export function Editor({ id }: { id: string }) {
 
   const gateBlocked = !isDemo && ws.ready && (!ws.session.signedIn || ws.session.account?.status !== "APPROVED");
   if (!ws.ready || (ws.loading && !source && !draft)) {
-    return <AppShell wide><div className="grid gap-6 pt-8 lg:grid-cols-[1fr_420px]"><Skeleton className="h-[70vh] rounded-[28px]" /><Skeleton className="hidden h-[70vh] rounded-[48px] lg:block" /></div></AppShell>;
+    return <AppShell wide hideMobileHeader mobileFooter><div className="grid gap-6 pt-8 lg:grid-cols-[1fr_420px]"><Skeleton className="h-[70vh] rounded-[28px]" /><Skeleton className="hidden h-[70vh] rounded-[48px] lg:block" /></div></AppShell>;
   }
   if (gateBlocked) {
-    return <AppShell><CenterCard><Smartphone className="h-8 w-8 text-coral" /><h1 className="font-display mt-4 text-2xl font-bold">The studio is locked</h1><p className="mt-2 text-sm text-ink-2">Your account needs to be signed in and approved to edit pages.</p><Link href="/dashboard" className="mt-6 inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-paper">Go to workspace</Link></CenterCard></AppShell>;
+    return <AppShell hideMobileHeader mobileFooter><CenterCard><Smartphone className="h-8 w-8 text-coral" /><h1 className="font-display mt-4 text-2xl font-bold">The studio is locked</h1><p className="mt-2 text-sm text-ink-2">Your account needs to be signed in and approved to edit pages.</p><Link href="/dashboard" className="mt-6 inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-semibold text-paper">Go to workspace</Link></CenterCard></AppShell>;
   }
   if (!source && !draft) {
     return (
-      <AppShell>
+      <AppShell hideMobileHeader mobileFooter>
         <CenterCard className="text-center">
           <div className="font-display text-6xl font-extrabold text-coral">404</div>
           <h1 className="font-display mt-2 text-2xl font-bold">This page is not in your workspace</h1>
@@ -523,15 +543,16 @@ export function Editor({ id }: { id: string }) {
   saveRef.current = () => void save();
 
   return (
-    <AppShell wide>
+    <AppShell wide hideMobileHeader mobileFooter>
       {/* Top bar */}
-      <div className="sticky top-16 z-20 -mx-4 border-b border-white/60 bg-paper/75 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) router.push(base); }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" aria-label="Back" data-testid="button-back">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="min-w-0">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-white/70 bg-paper/85 px-4 py-3 shadow-[0_8px_24px_-22px_rgba(23,32,30,.5)] backdrop-blur-2xl md:top-16 md:-mx-6 md:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="hidden min-w-0 items-center gap-3 md:flex">
+            <button onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) router.push(base); }}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" aria-label="Back" data-testid="button-back">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0">
             <div className="font-display truncate text-lg font-bold leading-tight" data-testid="text-editor-title">{draft.title || "Untitled"}</div>
             {slugEdit ? (
               <div className="flex items-center gap-1">
@@ -543,35 +564,49 @@ export function Editor({ id }: { id: string }) {
             ) : (
               <button onClick={() => { setSlugDraft(draft.slug); setSlugEdit(true); }} className="font-mono text-[11.5px] text-muted hover:text-ink" data-testid="button-edit-slug">/{draft.slug} · change</button>
             )}
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 md:hidden">
+            <LogoMark className="h-8 w-8 shrink-0" />
+            <div className="min-w-0">
+              <div className="font-display max-w-[36vw] truncate text-[15px] font-bold leading-tight" data-testid="text-editor-title-mobile">{draft.title || "Untitled"}</div>
+              <div className="truncate font-mono text-[10.5px] text-muted">/{slugEdit ? slugDraft : draft.slug}</div>
+            </div>
+          </div>
+          <div className="ml-auto hidden items-center gap-2 md:flex">
             <span className={cn("hidden items-center gap-1.5 text-[12px] font-medium sm:flex", dirty ? "text-coral-deep" : "text-go")} data-testid="text-save-state">
               <span className={cn("h-1.5 w-1.5 rounded-full", dirty ? "bg-coral" : "bg-go")} />{saving ? "Saving..." : dirty ? "Unsaved changes" : isDemo ? "Saved locally" : "All changes saved"}
             </span>
             <Btn variant="soft" size="md" onClick={() => setShare(true)} data-testid="button-share"><QrCode className="h-4 w-4" /><span className="hidden sm:inline">Share</span></Btn>
             <Btn variant="coral" onClick={save} loading={saving} disabled={!dirty} data-testid="button-save"><Save className="h-4 w-4" />Save</Btn>
           </div>
+          <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
+            <Btn variant={dirty ? "coral" : "soft"} size="sm" onClick={() => dirty ? void save() : setShare(true)} loading={saving} data-testid="button-mobile-primary">
+              {dirty ? <><Save className="h-4 w-4" />Save</> : <><QrCode className="h-4 w-4" />Share</>}
+            </Btn>
+            <button type="button" aria-label="More page actions" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/80 text-ink" data-testid="button-editor-more">
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-white/80 px-3 py-2">
+        <div className="mt-3 hidden items-center gap-2 rounded-xl border border-line bg-white/80 px-3 py-2 md:flex">
           <span className="shrink-0 text-[11px] font-semibold text-ink-2">{isDemo ? "Local preview" : "Live page"}</span>
           <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 break-all font-mono text-[12px] text-teal underline underline-offset-2" data-testid="link-editor-live-url">{liveUrl}</a>
           <Btn size="sm" className="shrink-0" onClick={() => copyText(liveUrl)} data-testid="button-copy-live-url"><Copy className="h-3.5 w-3.5" />Copy</Btn>
         </div>
-        {slugEdit && <div className="mt-1 pl-12"><HandleHint state={otherSlugs.has(slugDraft) ? "taken" : slugState} /></div>}
+        {slugEdit && <div className="mt-2 flex items-center gap-2 md:hidden">
+          <input autoFocus value={slugDraft} onChange={(e) => setSlugDraft(slugify(e.target.value))} className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 font-mono text-sm outline-none focus:border-ink" data-testid="input-edit-slug-mobile" />
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-go/10 text-go disabled:opacity-30" disabled={slugState !== "available" || otherSlugs.has(slugDraft)} onClick={() => { setDraft({ ...draft, slug: slugDraft }); setSlugEdit(false); }} aria-label="Apply handle" data-testid="button-apply-slug-mobile"><Check className="h-4 w-4" /></button>
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-muted" onClick={() => setSlugEdit(false)} aria-label="Cancel handle change"><X className="h-4 w-4" /></button>
+        </div>}
+        {slugEdit && <div className="mt-1 hidden pl-12 md:block"><HandleHint state={otherSlugs.has(slugDraft) ? "taken" : slugState} /></div>}
         {saveErr && <div className="mt-2 flex items-center gap-2 rounded-xl bg-stop/10 px-3 py-2 text-[13px] text-stop" data-testid="text-save-error"><AlertTriangle className="h-4 w-4 shrink-0" />{saveErr}<button className="ml-auto font-semibold underline" onClick={save}>Retry</button></div>}
-        <div className="mt-3 flex gap-1 rounded-full bg-ink/5 p-1 lg:hidden">
-          {(["edit", "preview"] as const).map((v) => (
-            <button key={v} onClick={() => setMobileView(v)} data-testid={`button-mobile-${v}`}
-              className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold transition", mobileView === v ? "bg-ink text-paper" : "text-ink-2")}>
-              {v === "edit" ? <SlidersHorizontal className="h-3.5 w-3.5" /> : <Smartphone className="h-3.5 w-3.5" />}{v === "edit" ? "Edit" : "Preview"}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
         <div className={cn("min-w-0", mobileView === "preview" && "hidden lg:block")}>
-          <div className="no-scrollbar -mx-1 mb-5 flex gap-1 overflow-x-auto px-1">
+          <div className="no-scrollbar -mx-1 mb-5 hidden gap-1 overflow-x-auto px-1 md:flex">
             {TABS.map((t) => (
               <button key={t.id} onClick={() => setTab(t.id)} data-testid={`tab-${t.id}`}
                 className={cn("flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-semibold transition-all",
@@ -582,11 +617,38 @@ export function Editor({ id }: { id: string }) {
               </button>
             ))}
           </div>
-          <div key={tab} className="rise" style={{ animationDuration: ".35s" }}>
+          <div key={tab} className="rise hidden md:block" style={{ animationDuration: ".35s" }}>
             {tab === "content" && <ContentTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
             {tab === "design" && <DesignTab c={c} set={set} apply={apply} />}
             {tab === "layout" && <LayoutTab c={c} set={set} />}
             {tab === "links" && <LinksTab c={c} set={set} />}
+          </div>
+          <div className="space-y-3 md:hidden" data-testid="studio-accordion">
+            {MOBILE_SECTIONS.map((section) => {
+              const expanded = openSection === section.id;
+              const headingId = `mobile-section-${section.id}`;
+              return (
+                <section key={section.id} className={cn("overflow-hidden rounded-[24px] border transition-colors", expanded ? "border-ink/15 bg-white/65 shadow-[0_14px_36px_-28px_rgba(23,32,30,.45)]" : "border-white/80 bg-white/45")}>
+                  <button type="button" id={headingId} aria-expanded={expanded} aria-controls={`${headingId}-panel`}
+                    onClick={() => setOpenSection(expanded ? null : section.id)}
+                    className="flex min-h-[76px] w-full items-center gap-3 px-5 py-4 text-left" data-testid={`accordion-toggle-${section.id}`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display text-[15px] font-bold">{section.title}</span>
+                      <span className="mt-1 block text-[11.5px] text-muted">{section.summary}</span>
+                    </span>
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", expanded && "rotate-180")} />
+                  </button>
+                  {expanded && (
+                    <div id={`${headingId}-panel`} role="region" aria-labelledby={headingId} className="space-y-5 border-t border-ink/5 px-4 py-5">
+                      {section.id === "content" && <ContentTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} section="brand" />}
+                      {section.id === "design" && <DesignTab c={c} set={set} apply={apply} />}
+                      {section.id === "links" && <LinksTab c={c} set={set} />}
+                      {section.id === "layout" && <ShowcaseTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
         </div>
         <aside className={cn(mobileView === "edit" && "hidden lg:block")}>
@@ -598,6 +660,39 @@ export function Editor({ id }: { id: string }) {
           </div>
         </aside>
       </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-paper/80 px-4 pt-3 shadow-[0_-12px_32px_-24px_rgba(23,32,30,.55)] backdrop-blur-2xl md:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}>
+        <div className="mx-auto flex max-w-[520px] rounded-full border border-white/80 bg-white/60 p-1.5">
+          {(["edit", "preview"] as const).map((view) => (
+            <button key={view} type="button" onClick={() => setMobileView(view)} aria-pressed={mobileView === view} data-testid={`button-mobile-${view}`}
+              className={cn("flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold transition", mobileView === view ? "bg-ink text-paper shadow-sm" : "text-ink-2 hover:bg-white/70")}>
+              {view === "edit" ? <SlidersHorizontal className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}{view === "edit" ? "Edit" : "Preview"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="More page actions" data-testid="drawer-editor-more">
+          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close actions" onClick={() => setMoreOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-white/80 bg-paper/95 p-5 shadow-2xl backdrop-blur-2xl"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold">Page actions</h2>
+                <p className="mt-0.5 truncate font-mono text-[11px] text-muted">{liveUrl}</p>
+              </div>
+              <button type="button" aria-label="Close actions" onClick={() => setMoreOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5" data-testid="button-close-editor-more"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-2">
+              <button type="button" onClick={() => { setMoreOpen(false); void copyText(liveUrl); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-copy-url"><Copy className="h-4 w-4" />Copy page URL</button>
+              <button type="button" onClick={() => { setMoreOpen(false); setShare(true); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-qr-code"><QrCode className="h-4 w-4" />QR code and share</button>
+              <button type="button" onClick={() => { setMoreOpen(false); setMobileView("preview"); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-preview"><Eye className="h-4 w-4" />Preview page</button>
+              <button type="button" onClick={() => { setMoreOpen(false); setSlugDraft(draft.slug); setSlugEdit(true); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-edit-url"><Link2 className="h-4 w-4" />Edit page URL</button>
+              <button type="button" onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) { setMoreOpen(false); router.push(base); } }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-back"><ArrowLeft className="h-4 w-4" />Back to workspace</button>
+            </div>
+          </div>
+        </div>
+      )}
       <ShareKit open={share} onClose={() => setShare(false)} page={savedPage} dirty={dirty} />
     </AppShell>
   );
