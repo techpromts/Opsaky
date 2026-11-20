@@ -29,7 +29,6 @@ function Route({ path }: { path: string }) {
   if (a === "dashboard" || a === "demo") {
     if (parts.length === 1) return <Dashboard />;
     if (b === "edit" && c && !d) return <Editor key={c} id={c} />;
-    if (a === "demo" && b === "admin" && !c) return <Admin />;
     if (a === "demo" && b === "preview" && c && !d) return <DemoPreview slug={c} />;
     return <NotFound />;
   }

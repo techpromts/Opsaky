@@ -28,7 +28,7 @@ function Actions({ a, busy, onSet }: { a: Account; busy: string | null; onSet: (
 export function Admin() {
   const ws = useWorkspace();
   const { isDemo } = useMode();
-  useTitle(isDemo ? "Demo admin" : "Admin panel");
+  useTitle("Admin panel");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"ALL" | AccountStatus>("ALL");
   const [busy, setBusy] = useState<Record<string, string>>({});

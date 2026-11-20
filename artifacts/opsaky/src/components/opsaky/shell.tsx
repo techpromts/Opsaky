@@ -10,7 +10,7 @@ import { Logo } from "./logo";
 export function useMode() {
   const pathname = usePathname() || "/";
   const isDemo = pathname === "/demo" || pathname.startsWith("/demo/");
-  return { isDemo, base: isDemo ? "/demo" : "/dashboard", adminPath: isDemo ? "/demo/admin" : "/admin", pathname };
+  return { isDemo, base: isDemo ? "/demo" : "/dashboard", adminPath: "/admin", pathname };
 }
 
 export function useTitle(title: string) {
@@ -30,10 +30,10 @@ export function AppShell({ children, wide, hideMobileHeader, mobileFooter }: { c
   const ws = useWorkspace();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isDemo, base, adminPath, pathname } = useMode();
-  const showAdmin = isDemo || ws.session.isAdmin;
+  const showAdmin = !isDemo && ws.session.isAdmin;
   const nav = [
     { href: base, label: isDemo ? "Demo workspace" : "Workspace", icon: LayoutGrid, active: pathname === base || pathname.startsWith(base + "/edit") },
-    ...(showAdmin ? [{ href: adminPath, label: isDemo ? "Demo admin" : "Admin panel", icon: ShieldCheck, active: pathname === adminPath }] : []),
+    ...(showAdmin ? [{ href: adminPath, label: "Admin panel", icon: ShieldCheck, active: pathname === adminPath }] : []),
   ];
   return (
     <div className="ops-canvas">
