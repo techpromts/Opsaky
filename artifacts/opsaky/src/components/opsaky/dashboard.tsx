@@ -58,7 +58,7 @@ export function HandleHint({ state }: { state: ReturnType<typeof useHandleCheck>
   return <p data-testid="text-handle-status" className={cn("mt-1.5 flex items-center gap-1.5 text-[12px] font-medium", m.c)}>{m.i}{m.t}</p>;
 }
 
-/* ---------- Gate screens (Kept intact) ---------- */
+/* ---------- Gate screens ---------- */
 function LoadingWorkspace() {
   return (
     <div className="pt-10">
@@ -307,10 +307,10 @@ function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => 
     <article className="group rise relative flex flex-col justify-between overflow-hidden rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:border-ink/10 hover:shadow-md"
       style={{ animationDelay: `${index * 0.05}s` }} data-testid={`card-page-${page.id}`}>
       
-      {/* Top Header: Avatar & Info */}
+      {/* Top Header: Logo & Info */}
       <div className="flex items-start gap-4">
-        {page.config.avatar ? (
-          <img src={page.config.avatar} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover border border-line" />
+        {page.config.logo ? (
+          <img src={page.config.logo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover border border-line" />
         ) : (
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full font-display text-xl font-bold border border-line" style={{ background: theme.buttonColor, color: theme.background }}>
             {page.title.charAt(0).toUpperCase()}
