@@ -15,17 +15,17 @@ export const BUSINESS_DAYS = [
   { id: "sat", label: "Saturday" },
 ] as const;
 export type BusinessDay = typeof BUSINESS_DAYS[number]["id"];
-export interface BusinessDayHours { open: string; close: string; closed: boolean }
+export interface BusinessDayHours { open: string; close: string; closed: boolean; is24Hours?: boolean }
 export type BusinessHours = Record<BusinessDay, BusinessDayHours>;
 export const MAX_GALLERY_ITEMS = 12;
 export const defaultBusinessHours = (): BusinessHours => Object.fromEntries(
-  BUSINESS_DAYS.map(({ id }) => [id, { open: "09:00", close: "17:00", closed: false }]),
+  BUSINESS_DAYS.map(({ id }) => [id, { open: "09:00", close: "17:00", closed: false, is24Hours: false }]),
 ) as BusinessHours;
 export interface PageConfig {
   category: string; customCategories?: string[]; bio: string; logo: string; logoShape: "circle" | "rounded" | "cover";
   announcement: string; showAnnouncement: boolean; announcementMode: "pinned" | "scroll";
   showStatus: boolean; isOpen: boolean; phone: string; email: string; showPhone: boolean; showEmail: boolean;
-  businessHoursEnabled: boolean; businessHoursTimezone: string; businessHours: BusinessHours;
+  businessHoursEnabled: boolean; is24_7?: boolean; businessHoursTimezone: string; businessHours: BusinessHours;
   theme: string; backgroundMode: "solid" | "gradient" | "image"; background: string; gradientColor: string;
   gradientAngle: number; backgroundImage: string; blur: number; overlay: number;
   surface: string; accent: string; buttonColor: string; textColor: string;
@@ -51,10 +51,10 @@ export const defaultConfig = (): PageConfig => ({
   category: "Other", customCategories: [], bio: "A little more about what makes us, us.", logo: "", logoShape: "circle",
   announcement: "Something good is here. Discover our latest collection.", showAnnouncement: false, announcementMode: "pinned",
   showStatus: false, isOpen: true, phone: "", email: "", showPhone: false, showEmail: false,
-  businessHoursEnabled: false, businessHoursTimezone: "Asia/Amman", businessHours: defaultBusinessHours(),
+  businessHoursEnabled: false, is24_7: false, businessHoursTimezone: "Asia/Amman", businessHours: defaultBusinessHours(),
   theme: "cream", backgroundMode: "solid", background: "#f4f0e8", gradientColor: "#e1e9db", gradientAngle: 135,
   backgroundImage: "", blur: 0, overlay: 20, surface: "#ffffff", accent: "#837053", buttonColor: "#343c31",
-  textColor: "#30392f", font: "sans", titleSize: 28, material: "shadow", buttonShape: "rounded", animation: "lift",
+  textColor: "#30392f", font: "sans", titleSize: 28, material: "glass", buttonShape: "rounded", animation: "lift",
   showcaseFirst: true, galleryMode: "grid", gallery: [], links: [],
 });
 export function normalizePageConfig(value: unknown): PageConfig {
