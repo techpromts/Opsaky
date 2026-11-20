@@ -8,14 +8,14 @@ import {
   Link2, Loader2, Palette, Plus, QrCode, RectangleHorizontal, Save, Smartphone, Square, SlidersHorizontal, Trash2, Type, Upload, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
-import { BUSINESS_DAYS, CATEGORIES, MAX_GALLERY_ITEMS, THEMES, slugify, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
+import { BUSINESS_DAYS, CATEGORIES, MAX_GALLERY_ITEMS, THEMES, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
 import { compressImage, isSupportedImageType, MAX_IMAGE_DATA_URL_LENGTH, type ImageCompressionOptions } from "@/lib/images";
 import { detectPlatform } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, ColorField, IconBtn, Label, Modal, Range, Segmented, Skeleton, Switch, TextArea, TextInput } from "./ui";
 import { PhoneFrame, PlatformIcon, Storefront, platformName } from "./storefront";
-import { copyText, HandleHint, useHandleCheck } from "./dashboard";
+import { copyText } from "./dashboard";
 import { pageUrl } from "@/lib/urls";
 import { CategorySelector } from "./category-selector";
 
@@ -104,6 +104,34 @@ function useUploader() {
   return { busyKey, run };
 }
 
+/* Mini visual diagrams for gallery layout selection */
+function LayoutDiagram({ mode }: { mode: PageConfig["galleryMode"] }) {
+  if (mode === "featured") {
+    return (
+      <span className="flex flex-col gap-1" aria-hidden="true">
+        <span className="h-2.5 w-11 rounded-[3px] bg-current opacity-85" />
+        <span className="h-2.5 w-11 rounded-[3px] bg-current opacity-50" />
+      </span>
+    );
+  }
+  if (mode === "grid") {
+    return (
+      <span className="grid grid-cols-2 gap-1" aria-hidden="true">
+        <span className="h-2.5 w-5 rounded-[3px] bg-current opacity-85" />
+        <span className="h-2.5 w-5 rounded-[3px] bg-current opacity-85" />
+        <span className="h-2 w-5 rounded-[3px] bg-current opacity-45" />
+        <span className="h-2 w-5 rounded-[3px] bg-current opacity-45" />
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1" aria-hidden="true">
+      <span className="h-5 w-6 rounded-[3px] bg-current opacity-85" />
+      <span className="h-5 w-4 rounded-[3px] bg-current opacity-40" />
+    </span>
+  );
+}
+
 /* ---------------- Tabs ---------------- */
 type Set = <K extends keyof PageConfig>(k: K, v: PageConfig[K]) => void;
 
@@ -149,7 +177,37 @@ function BrandTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t:
         </div>
       </Section>
 
-      <Section title="Full-Screen Background Image" desc="Fills the entire page seamlessly without hard edges.">
+      <Section title="Contact Details" desc="Show your email or phone number on separate rows in the header.">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Email address</Label>
+            <Switch checked={c.showEmail} onChange={(v) => set("showEmail", v)} label="Show email" testId="switch-show-email" />
+          </div>
+          <TextInput
+            type="email"
+            value={c.email}
+            onChange={(e) => set("email", e.target.value)}
+            placeholder="info@yourbrand.com"
+            data-testid="input-contact-email"
+          />
+        </div>
+
+        <div className="space-y-2.5 border-t border-line pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Phone number</Label>
+            <Switch checked={c.showPhone} onChange={(v) => set("showPhone", v)} label="Show phone" testId="switch-show-phone" />
+          </div>
+          <TextInput
+            type="tel"
+            value={c.phone}
+            onChange={(e) => set("phone", e.target.value)}
+            placeholder="+962 79 000 0000"
+            data-testid="input-header-phone"
+          />
+        </div>
+      </Section>
+
+      <Section title="Full-Screen Background Image" desc="Fills the entire viewport smoothly even on pull/overscroll.">
         <div className="flex items-center gap-3">
           <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2">
             {c.backgroundImage ? <img src={c.backgroundImage} alt="Background" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-6 w-6 text-muted" /></div>}
@@ -193,21 +251,46 @@ function ItemsTab({ c, set }: { c: PageConfig; set: Set }) {
   };
   const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
 
+  const layoutOptions: { mode: PageConfig["galleryMode"]; title: string; subtitle: string }[] = [
+    { mode: "featured", title: "Stacked Cards", subtitle: "One wide card per row" },
+    { mode: "grid", title: "2-Column Grid", subtitle: "Two items side by side" },
+    { mode: "carousel", title: "Horizontal Swipe", subtitle: "Slide left & right" },
+  ];
+
   return (
     <div className="space-y-4">
-      <Section title="Products / Showcase" desc="Add up to 12 items. Customers order directly on WhatsApp." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
+      <Section title="Products / Showcase" desc="Add up to 12 items and pick how visitors browse them." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
         <div>
-          <Label>Gallery layout</Label>
-          <Segmented
-            value={c.galleryMode}
-            onChange={(v) => set("galleryMode", v)}
-            testId="seg-gallery-mode"
-            options={[
-              { value: "grid", label: "2x2 Grid" },
-              { value: "carousel", label: "Carousel" },
-              { value: "featured", label: "Large Cards" },
-            ]}
-          />
+          <Label>How items appear on your page</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {layoutOptions.map((opt) => {
+              const active = c.galleryMode === opt.mode;
+              return (
+                <button
+                  key={opt.mode}
+                  type="button"
+                  data-testid={`button-gallery-mode-${opt.mode}`}
+                  onClick={() => set("galleryMode", opt.mode)}
+                  className={cn(
+                    "flex flex-col items-center justify-between gap-2 rounded-2xl border p-3 text-center transition",
+                    active
+                      ? "border-ink bg-ink text-paper shadow-sm"
+                      : "border-line bg-white/75 text-ink hover:border-ink/30"
+                  )}
+                >
+                  <div className="flex h-9 items-center justify-center">
+                    <LayoutDiagram mode={opt.mode} />
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-bold leading-tight">{opt.title}</div>
+                    <div className={cn("mt-0.5 text-[10px] leading-tight", active ? "text-paper/75" : "text-muted")}>
+                      {opt.subtitle}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -302,7 +385,6 @@ function LinksAndHoursTab({ c, set }: { c: PageConfig; set: Set }) {
       >
         {c.businessHoursEnabled && (
           <div className="space-y-3">
-            {/* 24/7 Master Toggle */}
             <div
               onClick={() => set("is24_7", !c.is24_7)}
               className={cn(
@@ -577,7 +659,6 @@ export function Editor({ id }: { id: string }) {
 
   return (
     <div className="relative min-h-[100dvh] bg-paper lg:bg-transparent">
-      {/* 4-Tab Navigation */}
       <div className="sticky top-0 z-40 border-b border-line bg-paper/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-2 py-2.5 sm:px-6">
           <button
@@ -625,7 +706,6 @@ export function Editor({ id }: { id: string }) {
 
       <div className="mx-auto max-w-[1500px]">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
-          {/* Editor Area */}
           <div className={cn("px-4 py-6 pb-28 sm:px-6 lg:pb-10", mobileView === "preview" && "hidden lg:block")}>
             <div className="rise" style={{ animationDuration: ".3s" }}>
               {tab === "brand" && <BrandTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
@@ -635,7 +715,6 @@ export function Editor({ id }: { id: string }) {
             </div>
           </div>
 
-          {/* Live Phone Preview */}
           <aside className={cn("px-4 py-6 pb-28 lg:border-l lg:border-line lg:bg-paper-2/60 lg:px-6 lg:pb-6", mobileView === "edit" && "hidden lg:block")}>
             <div className="lg:sticky lg:top-[84px]">
               <div className="mb-3 flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-2">
@@ -650,7 +729,6 @@ export function Editor({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Floating Bottom Bar (Mobile Only) */}
       <div
         className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper/95 px-4 pt-3 shadow-[0_-10px_40px_-10px_rgba(23,32,30,.2)] backdrop-blur-xl lg:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
