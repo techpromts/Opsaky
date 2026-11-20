@@ -1,3 +1,0 @@
-- [Clean deployment checks](clean-deployment-checks.md) — verify the isolated app build without locally generated shared-package declarations.
-- [Deployment schema tradeoff](deployment-schema-tradeoff.md) — automatic external database schema synchronization was an explicitly approved deployment choice.
-- [Page visibility policy](page-visibility-policy.md) — approved workspaces' saved pages must be live without a separate publish action.
