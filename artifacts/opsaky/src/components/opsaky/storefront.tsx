@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Globe, Mail, MapPin, Phone, Store } from "lucide-react";
+import { Clock, Globe, Mail, MapPin, Phone, Store } from "lucide-react";
 import { SiFacebook, SiInstagram, SiSnapchat, SiTiktok, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
 import type { PageConfig, SmartLink } from "@/lib/model";
 import { getBusinessStatus } from "@/lib/business-hours";
@@ -131,12 +131,12 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
 
   // Liquid Glass / Glassmorphism surface style
   const glassStyle: CSSProperties = {
-    background: rgba(c.surface, imageBackground ? 0.58 : 0.72),
-    backdropFilter: "blur(22px) saturate(160%)",
-    WebkitBackdropFilter: "blur(22px) saturate(160%)",
-    border: `1px solid ${rgba("#ffffff", 0.42)}`,
-    boxShadow: `0 16px 40px -20px ${rgba("#000000", 0.32)}, inset 0 1px 0 0 ${rgba("#ffffff", 0.5)}`,
-    borderRadius: 24,
+    background: rgba(c.surface, imageBackground ? 0.56 : 0.72),
+    backdropFilter: "blur(24px) saturate(165%)",
+    WebkitBackdropFilter: "blur(24px) saturate(165%)",
+    border: `1px solid ${rgba("#ffffff", 0.45)}`,
+    boxShadow: `0 20px 44px -22px ${rgba("#000000", 0.3)}, inset 0 1px 0 0 ${rgba("#ffffff", 0.55)}`,
+    borderRadius: 28,
   };
 
   const surface: CSSProperties =
@@ -191,7 +191,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       className={cn("mx-auto h-24 w-24 object-cover", c.logoShape === "circle" ? "rounded-full" : "rounded-[24px]")}
       style={{
         boxShadow: `0 12px 32px -10px ${rgba("#000000", 0.45)}`,
-        border: `3px solid ${rgba("#ffffff", 0.75)}`,
+        border: `3px solid ${rgba("#ffffff", 0.8)}`,
       }}
     />
   );
@@ -199,7 +199,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const initialBadge = !c.logo && (
     <div
       className={cn("mx-auto flex h-20 w-20 items-center justify-center text-3xl font-bold shadow-lg", c.logoShape === "circle" ? "rounded-full" : "rounded-[24px]")}
-      style={{ background: c.accent, color: readableText(c.accent), fontFamily: font, border: `2px solid ${rgba("#ffffff", 0.5)}` }}
+      style={{ background: c.accent, color: readableText(c.accent), fontFamily: font, border: `2px solid ${rgba("#ffffff", 0.55)}` }}
     >
       {(title || "O").trim().charAt(0).toUpperCase()}
     </div>
@@ -305,6 +305,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   );
 
   const isOpenNow = c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen;
+  const showStatusBadge = c.businessHoursEnabled || c.showStatus;
 
   return (
     <div
@@ -312,7 +313,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       className={cn("relative isolate w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
       style={{ ...bg, color: c.textColor, fontFamily: font }}
     >
-      {/* Full-viewport seamless background image (no hard edges when scrolling) */}
+      {/* Full-viewport seamless background image */}
       {imageBackground && (
         <div
           className={cn(
@@ -344,86 +345,114 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
 
       <main className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5 pb-12", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}>
         <header className="relative text-center">
-          {logo}
-          {c.logoShape !== "cover" && initialBadge}
+          {/* Avatar / Logo floating slightly above the glass card */}
+          <div className="relative z-10">
+            {logo}
+            {c.logoShape !== "cover" && initialBadge}
+          </div>
 
-          {/* Liquid Glass Header Card */}
-          <div className="mt-4 px-5 py-6" style={glassStyle}>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {c.category && (
-                <span
-                  className="rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em]"
-                  style={{ background: rgba(c.accent, 0.16), color: c.accent }}
-                >
-                  {c.category}
-                </span>
-              )}
-              {(c.businessHoursEnabled || c.showStatus) && (
-                <span
-                  data-testid="sf-status"
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                  style={{
-                    background: isOpenNow ? "rgba(22, 163, 74, 0.18)" : "rgba(220, 38, 38, 0.16)",
-                    color: isOpenNow ? "#15803d" : "#b91c1c",
-                  }}
-                >
-                  <span
-                    className={cn("h-1.5 w-1.5 rounded-full", isOpenNow && "animate-pulse")}
-                    style={{ background: isOpenNow ? "#16a34a" : "#dc2626" }}
-                  />
-                  {c.businessHoursEnabled
-                    ? hoursStatus
-                      ? hoursStatus.valid
-                        ? hoursStatus.isOpen
-                          ? "Open Now"
-                          : "Closed"
-                        : "Hours unavailable"
-                      : "Checking hours"
-                    : c.isOpen
-                      ? "Open Now"
-                      : "Closed"}
-                </span>
-              )}
-              {c.businessHoursEnabled && hoursStatus?.valid && (
-                <span
-                  className="rounded-full px-2.5 py-1 text-[10.5px] font-semibold"
-                  style={{ background: rgba("#ffffff", 0.55) }}
-                  data-testid="sf-hours-text"
-                >
-                  {hoursStatus.hoursText}
-                </span>
-              )}
-            </div>
+          {/* Refined Editorial Liquid Glass Header */}
+          <div
+            className={cn("relative px-6 pb-6", c.logoShape !== "cover" ? "-mt-10 pt-14" : "mt-4 pt-6")}
+            style={glassStyle}
+          >
+            {/* Subtle Editorial Category Eyebrow (no heavy pill box) */}
+            {c.category && (
+              <div
+                className="text-[10.5px] font-extrabold uppercase tracking-[0.22em]"
+                style={{ color: c.accent }}
+              >
+                {c.category}
+              </div>
+            )}
 
+            {/* Brand Title */}
             <h1
-              className="mt-3 font-extrabold leading-[1.08]"
+              className="mt-1.5 font-extrabold tracking-tight leading-[1.08]"
               style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}
             >
               {title || "Untitled page"}
             </h1>
 
-            {c.bio && <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed opacity-85">{c.bio}</p>}
+            {/* Bio */}
+            {c.bio && (
+              <p className="mx-auto mt-2 max-w-[32ch] text-[13.5px] leading-relaxed opacity-75">
+                {c.bio}
+              </p>
+            )}
 
-            {((c.showPhone && c.phone) || (c.showEmail && c.email)) && (
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {/* Unified Live Status & Hours Pill + Quick Contact Actions */}
+            {(showStatusBadge || (c.showPhone && c.phone) || (c.showEmail && c.email)) && (
+              <div
+                className="mt-5 flex flex-wrap items-center justify-center gap-2 border-t pt-4"
+                style={{ borderColor: rgba(c.textColor, 0.08) }}
+              >
+                {showStatusBadge && (
+                  <div
+                    data-testid="sf-status"
+                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-bold"
+                    style={{
+                      background: isOpenNow ? "rgba(22, 163, 74, 0.12)" : "rgba(220, 38, 38, 0.12)",
+                      color: isOpenNow ? "#15803d" : "#b91c1c",
+                    }}
+                  >
+                    <span
+                      className={cn("h-2 w-2 rounded-full", isOpenNow && "animate-pulse")}
+                      style={{ background: isOpenNow ? "#16a34a" : "#dc2626" }}
+                    />
+                    <span>
+                      {c.businessHoursEnabled
+                        ? hoursStatus
+                          ? hoursStatus.valid
+                            ? hoursStatus.isOpen
+                              ? "Open Now"
+                              : "Closed"
+                            : "Hours unavailable"
+                          : "Checking"
+                        : c.isOpen
+                          ? "Open Now"
+                          : "Closed"}
+                    </span>
+                    {c.businessHoursEnabled && hoursStatus?.valid && (
+                      <>
+                        <span className="opacity-35">•</span>
+                        <span className="font-semibold opacity-90" data-testid="sf-hours-text">
+                          {hoursStatus.hoursText}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {c.showPhone && c.phone && (
                   <a
                     href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
-                    className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-bold transition active:scale-95", anim)}
-                    style={{ background: rgba("#ffffff", 0.55), border: `1px solid ${rgba("#ffffff", 0.6)}` }}
+                    aria-label="Call"
+                    title={c.phone}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[11.5px] font-bold transition hover:brightness-95 active:scale-95",
+                      anim
+                    )}
+                    style={{ background: rgba(c.textColor, 0.06), color: c.textColor }}
                   >
                     <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />
-                    {c.phone}
+                    <span>Call</span>
                   </a>
                 )}
+
                 {c.showEmail && c.email && (
                   <a
                     href={interactive ? `mailto:${c.email}` : undefined}
-                    className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-bold transition active:scale-95", anim)}
-                    style={{ background: rgba("#ffffff", 0.55), border: `1px solid ${rgba("#ffffff", 0.6)}` }}
+                    aria-label="Email"
+                    title={c.email}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[11.5px] font-bold transition hover:brightness-95 active:scale-95",
+                      anim
+                    )}
+                    style={{ background: rgba(c.textColor, 0.06), color: c.textColor }}
                   >
                     <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />
-                    {c.email}
+                    <span>Email</span>
                   </a>
                 )}
               </div>
@@ -461,16 +490,20 @@ export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { titl
   );
 }
 
+/* Realistic iPhone 15/16 Pro Dimensions (393x852 viewport ratio) */
 export function PhoneFrame({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "relative mx-auto flex h-[min(700px,calc(100dvh-150px))] w-full max-w-[360px] flex-col rounded-[44px] bg-ink p-[10px] shadow-[0_32px_70px_-25px_rgba(23,32,30,.55)]",
+        "relative mx-auto w-full max-w-[393px] rounded-[52px] bg-[#141716] p-[12px] shadow-[0_35px_90px_-20px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)]",
         className
       )}
     >
-      <div className="pointer-events-none absolute left-1/2 top-[16px] z-20 h-[20px] w-[84px] -translate-x-1/2 rounded-full bg-ink" />
-      <div className="thin-scroll relative flex-1 overflow-y-auto overflow-x-hidden rounded-[34px] bg-paper">
+      {/* Dynamic Island */}
+      <div className="pointer-events-none absolute left-1/2 top-[22px] z-30 h-[26px] w-[104px] -translate-x-1/2 rounded-full bg-black shadow-inner" />
+      
+      {/* Realistic 19.5:9 Mobile Screen */}
+      <div className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full overflow-y-auto overflow-x-hidden rounded-[40px] bg-paper">
         {children}
       </div>
     </div>
