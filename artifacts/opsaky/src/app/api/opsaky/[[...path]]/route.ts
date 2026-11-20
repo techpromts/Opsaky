@@ -11,13 +11,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ path?: string[] }> };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
+const MAX_REQUEST_BODY_BYTES = 4_000_000;
 const accountView = (a: { _count?: { pages: number }; [key: string]: unknown }) => {
   const { clerkId: _, _count, ...rest } = a;
   return { ...rest, pageCount: _count?.pages ?? 0 };
 };
 async function body(req: NextRequest) {
   const content = await req.text();
-  if (Buffer.byteLength(content, "utf8") > 2_000_000) throw new HttpError(413, "Images are too large. Use smaller compressed images.");
+  if (Buffer.byteLength(content, "utf8") > MAX_REQUEST_BODY_BYTES) throw new HttpError(413, "Page data exceeds the 4 MB upload limit. Use smaller compressed images.");
   try { return JSON.parse(content); } catch { throw new HttpError(400, "Invalid JSON request."); }
 }
 async function handle(req: NextRequest, { params }: Context) {
@@ -30,7 +31,7 @@ async function handle(req: NextRequest, { params }: Context) {
       const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
       if (origin && new URL(origin).host !== host) throw new HttpError(403, "Cross-origin writes are not allowed.");
       const length = Number(req.headers.get("content-length") ?? 0);
-      if (length > 2_000_000) throw new HttpError(413, "Upload size limit exceeded.");
+      if (length > MAX_REQUEST_BODY_BYTES) throw new HttpError(413, "Page data exceeds the 4 MB upload limit.");
     }
     if (resource === "session" && req.method === "GET") {
       if (!authConfigured()) return json({ configured: false, signedIn: false, isAdmin: false, email: "", account: null });

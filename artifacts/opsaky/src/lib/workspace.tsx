@@ -7,7 +7,8 @@ import {
   requestActivation as apiRequestActivation, updateAccountStatus, getPublicPage as apiGetPublicPage,
   type StorePage as ApiStorePage,
 } from "@workspace/api-client-react";
-import { type Account, type AccountStatus, type ActivationInput, type StorePage, type PageConfig, newPage, validSlug, THEMES } from "./model";
+import { isValidBusinessHours } from "./business-hours";
+import { type Account, type AccountStatus, type ActivationInput, type StorePage, type PageConfig, MAX_GALLERY_ITEMS, newPage, normalizePageConfig, validSlug, THEMES } from "./model";
 import { demoAccount, demoAccounts, demoPages } from "./demo";
 
 interface Session { configured: boolean; signedIn: boolean; isAdmin: boolean; email: string; account: Account | null }
@@ -31,7 +32,10 @@ function saveLocal(pages: StorePage[], accounts: Account[]) {
   try { localStorage.setItem(STORAGE, JSON.stringify({ pages, accounts })); }
   catch { throw new Error("Your browser’s demo storage is full or unavailable. Try smaller images or remove a demo page."); }
 }
-const toPage = (page: { config: unknown }) => page as unknown as StorePage;
+const toPage = <T extends { config: unknown }>(page: T): Omit<T, "config"> & { config: PageConfig } => ({
+  ...page,
+  config: normalizePageConfig(page.config),
+});
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const path = usePathname() || "/";
   const isDemo = path === "/demo" || path.startsWith("/demo/");
@@ -66,7 +70,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem(STORAGE);
       const data = stored ? JSON.parse(stored) as { pages: StorePage[]; accounts: Account[] } : null;
       if (data && (!Array.isArray(data.pages) || !Array.isArray(data.accounts))) throw new Error("Saved demo data is not valid. Clear this site’s browser storage to reset the demo.");
-      const p = data?.pages ?? demoPages();
+      const p = (data?.pages ?? demoPages()).map((page) => toPage(page));
       const a = data?.accounts ?? demoAccounts;
       setPages(p); setAccounts(a);
       setSession({ configured: false, signedIn: true, isAdmin: true, email: demoAccount.email, account: { ...demoAccount, pageCount: p.length } });
@@ -101,7 +105,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const savePage = useCallback(async (page: StorePage) => {
     if (!validSlug(page.slug)) throw new Error("Choose a valid handle with 3–48 lowercase letters, numbers, or hyphens.");
     if (!page.title.trim()) throw new Error("Your page needs a title.");
-    if (page.config.gallery.length > 4 || page.config.links.length > 7) throw new Error("Each page supports up to 4 photos and 7 links.");
+    if (page.config.gallery.length > MAX_GALLERY_ITEMS || page.config.links.length > 7) throw new Error(`Each page supports up to ${MAX_GALLERY_ITEMS} photos and 7 links.`);
+    if (page.config.businessHoursEnabled && !isValidBusinessHours(page.config.businessHours, page.config.businessHoursTimezone)) {
+      throw new Error("Enter valid business hours and an IANA time zone, such as Asia/Amman.");
+    }
     if (isDemo) {
       if (!pages.some(p => p.id === page.id)) throw new Error("This page no longer exists.");
       if (pages.some(p => p.slug === page.slug && p.id !== page.id)) throw new Error("That handle is already taken.");

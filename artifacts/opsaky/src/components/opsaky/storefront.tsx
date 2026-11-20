@@ -1,9 +1,10 @@
 "use client";
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Globe, Mail, MapPin, Phone, Store } from "lucide-react";
 import { SiFacebook, SiInstagram, SiSnapchat, SiTiktok, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
 import type { PageConfig, SmartLink } from "@/lib/model";
-import { detectPlatform, readableText, safeHref } from "@/lib/links";
+import { getBusinessStatus } from "@/lib/business-hours";
+import { detectPlatform, getWhatsAppDigits, readableText, safeHref, whatsAppOrderUrl } from "@/lib/links";
 import { cn } from "@/lib/utils";
 
 export const FONT_STACKS: Record<PageConfig["font"], string> = {
@@ -28,6 +29,24 @@ function ProductCategory({ category, config }: { category?: string; config: Page
       style={{ background: config.accent, color: readableText(config.accent) }}>
       {label}
     </span>
+  );
+}
+
+function OrderOnWhatsApp({ digits, title, price, interactive, itemId }: {
+  digits: string;
+  title: string;
+  price: string;
+  interactive: boolean;
+  itemId: string;
+}) {
+  const href = whatsAppOrderUrl(digits, title, price);
+  return (
+    <a href={interactive ? href : "#"} target={interactive ? "_blank" : undefined} rel={interactive ? "noopener noreferrer" : undefined}
+      onClick={interactive ? undefined : (event) => event.preventDefault()}
+      className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#25D366] px-2 py-2 text-[10px] font-bold text-[#064e3b] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#064e3b] focus-visible:ring-offset-2"
+      data-testid={`sf-order-${itemId}`}>
+      <SiWhatsapp className="h-3.5 w-3.5 shrink-0" />Order on WhatsApp
+    </a>
   );
 }
 
@@ -61,14 +80,27 @@ interface Props {
   framed?: boolean;
   interactive?: boolean;
   footer?: ReactNode;
+  hideFooter?: boolean;
 }
 
-export function Storefront({ title, config: c, framed, interactive = true, footer }: Props) {
+export function Storefront({ title, config: c, framed, interactive = true, footer, hideFooter = false }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [clock, setClock] = useState<number | null>(null);
+  useEffect(() => {
+    if (!c.businessHoursEnabled) { setClock(null); return; }
+    const updateClock = () => setClock(Date.now());
+    updateClock();
+    const timer = window.setInterval(updateClock, 60_000);
+    return () => window.clearInterval(timer);
+  }, [c.businessHoursEnabled]);
+  const hoursStatus = c.businessHoursEnabled && clock !== null
+    ? getBusinessStatus(c.businessHours, c.businessHoursTimezone, new Date(clock))
+    : undefined;
   const btnText = c.buttonShape === "outline" ? c.buttonColor : readableText(c.buttonColor);
   const radius = { pill: 999, rounded: 16, sharp: 2, outline: 999 }[c.buttonShape];
   const anim = c.animation === "lift" ? "sf-lift" : c.animation === "scale" ? "sf-scale" : "";
   const activeLinks = c.links.filter((l) => l.active && l.url.trim());
+  const whatsappDigits = getWhatsAppDigits(c.links);
   const font = FONT_STACKS[c.font];
 
   const surface: CSSProperties =
@@ -82,6 +114,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     c.backgroundMode === "gradient"
       ? { background: `linear-gradient(${c.gradientAngle}deg, ${c.background}, ${c.gradientColor})` }
       : { background: c.background };
+  const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
 
   const linkStyle = (): CSSProperties =>
     c.buttonShape === "outline"
@@ -116,12 +149,15 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
           {c.gallery.map((g) => (
             <figure key={g.id} className="w-[72%] shrink-0 snap-center overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[4/5] w-full object-cover" />}
-              {(g.category || g.title || g.price) && <figcaption className="flex items-center justify-between gap-2 px-3 py-2.5 text-[13px]">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <ProductCategory category={g.category} config={c} />
-                  {g.title && <span className="block truncate font-semibold">{g.title}</span>}
+              {(g.category || g.title || g.price || whatsappDigits) && <figcaption className="px-3 py-2.5 text-[13px]">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <ProductCategory category={g.category} config={c} />
+                    {g.title && <span className="block truncate font-semibold">{g.title}</span>}
+                  </div>
+                  {g.price && <span className="shrink-0 font-bold" style={{ color: c.accent }}>{g.price}</span>}
                 </div>
-                {g.price && <span className="shrink-0 font-bold" style={{ color: c.accent }}>{g.price}</span>}
+                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
               </figcaption>}
             </figure>
           ))}
@@ -132,10 +168,11 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
           {c.gallery.map((g) => (
             <figure key={g.id} className="relative overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-square w-full object-cover" />}
-              {(g.category || g.title || g.price) && <figcaption className="px-2.5 py-2 text-[12px]">
+              {(g.category || g.title || g.price || whatsappDigits) && <figcaption className="px-2.5 py-2 text-[12px]">
                 <ProductCategory category={g.category} config={c} />
                 <div className="truncate font-semibold">{g.title}</div>
                 {g.price && <div className="font-bold" style={{ color: c.accent }}>{g.price}</div>}
+                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
               </figcaption>}
             </figure>
           ))}
@@ -148,7 +185,10 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
               {g.image && <img src={g.image} alt={g.title} className="aspect-[16/10] w-full object-cover" />}
               {g.price && <span className="absolute right-3 top-3 rounded-full px-3 py-1 text-[12px] font-bold shadow-lg" style={{ background: c.accent, color: readableText(c.accent) }}>{g.price}</span>}
               {g.category && <span className="absolute left-3 top-3"><ProductCategory category={g.category} config={c} /></span>}
-              {g.title && <figcaption className="px-4 py-3 text-[14px] font-semibold">{g.title}</figcaption>}
+              {(g.title || whatsappDigits) && <figcaption className="px-4 py-3 text-[14px] font-semibold">
+                {g.title && <div>{g.title}</div>}
+                {whatsappDigits && <OrderOnWhatsApp digits={whatsappDigits} title={g.title} price={g.price} interactive={interactive} itemId={g.id} />}
+              </figcaption>}
             </figure>
           ))}
         </div>
@@ -170,11 +210,14 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   );
 
   return (
-    <div ref={scrollRef} className={cn("relative isolate w-full overflow-hidden", framed ? "min-h-full" : "min-h-[100dvh]")} style={{ ...bg, color: c.textColor, fontFamily: font }}>
-      {c.backgroundMode === "image" && c.backgroundImage && (
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <img src={c.backgroundImage} alt="" className="h-full w-full scale-110 object-cover" style={{ filter: `blur(${c.blur}px)` }} />
+    <div ref={scrollRef} className={cn("relative isolate w-full overflow-hidden", framed ? "min-h-full" : "min-h-screen min-h-[100dvh]")} style={{ ...bg, color: c.textColor, fontFamily: font }}>
+      {imageBackground && (
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <img src={c.backgroundImage} alt="" className="absolute -inset-[12%] h-[124%] w-[124%] object-cover"
+            style={{ filter: `blur(${c.blur}px)` }} />
           <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${c.overlay / 100})` }} />
+          <div className="absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(to bottom, ${rgba(c.background, 0.85)}, transparent)` }} />
+          <div className="absolute inset-x-0 bottom-0 h-48" style={{ background: `linear-gradient(to top, ${rgba(c.background, 0.92)}, transparent)` }} />
         </div>
       )}
       {announcement}
@@ -187,32 +230,52 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       <main className={cn("mx-auto w-full max-w-[480px] px-5 pb-10", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}>
         <header className="relative text-center">
           {logo}{c.logoShape !== "cover" && initialBadge}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            {c.category && <span className="rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ background: rgba(c.accent, 0.14), color: c.accent }}>{c.category}</span>}
-            {c.showStatus && (
-              <span data-testid="sf-status" className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                style={{ background: c.isOpen ? "rgba(31,157,91,.14)" : "rgba(224,54,44,.14)", color: c.isOpen ? "#1f9d5b" : "#e0362c" }}>
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: c.isOpen ? "#1f9d5b" : "#e0362c" }} />
-                {c.isOpen ? "Open now" : "Closed"}
-              </span>
-            )}
-          </div>
-          <h1 className="mt-3 font-bold leading-[1.05]" style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}>{title || "Untitled page"}</h1>
-          {c.bio && <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed opacity-80">{c.bio}</p>}
-          {((c.showPhone && c.phone) || (c.showEmail && c.email)) && (
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {c.showPhone && c.phone && (
-                <a href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
-                  <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.phone}
-                </a>
+          <div className={cn("mt-4", imageBackground && "rounded-[28px] px-4 py-5")}
+            style={imageBackground ? {
+              background: rgba(c.surface, 0.82),
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+              border: `1px solid ${rgba(c.textColor, 0.12)}`,
+              boxShadow: `0 18px 44px -24px ${rgba(c.textColor, 0.55)}`,
+            } : undefined}>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {c.category && <span className="rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ background: rgba(c.accent, 0.14), color: c.accent }}>{c.category}</span>}
+              {(c.businessHoursEnabled || c.showStatus) && (
+                <span data-testid="sf-status" className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                  style={{
+                    background: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "rgba(31,157,91,.14)" : "rgba(117,128,121,.16)",
+                    color: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "#168852" : "#68736c",
+                  }}>
+                  <span className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: (c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen) ? "#168852" : "#68736c" }} />
+                  {c.businessHoursEnabled
+                    ? hoursStatus ? (hoursStatus.valid ? (hoursStatus.isOpen ? "Open Now" : "Closed") : "Hours unavailable") : "Checking hours"
+                    : c.isOpen ? "Open Now" : "Closed"}
+                </span>
               )}
-              {c.showEmail && c.email && (
-                <a href={interactive ? `mailto:${c.email}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
-                  <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.email}
-                </a>
+              {c.businessHoursEnabled && hoursStatus?.valid && (
+                <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-semibold" data-testid="sf-hours-text">
+                  {hoursStatus.hoursText}
+                </span>
               )}
             </div>
-          )}
+            <h1 className="mt-3 font-bold leading-[1.05]" style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}>{title || "Untitled page"}</h1>
+            {c.bio && <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed opacity-80">{c.bio}</p>}
+            {((c.showPhone && c.phone) || (c.showEmail && c.email)) && (
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {c.showPhone && c.phone && (
+                  <a href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
+                    <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.phone}
+                  </a>
+                )}
+                {c.showEmail && c.email && (
+                  <a href={interactive ? `mailto:${c.email}` : undefined} className={cn("inline-flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold", anim)} style={{ ...surface, borderRadius: 999 }}>
+                    <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />{c.email}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
         </header>
         <div className="mt-7 space-y-6">
           {c.showcaseFirst ? <>{gallery}{links}</> : <>{links}{gallery}</>}
@@ -222,9 +285,9 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
             </div>
           )}
         </div>
-        <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
+        {!hideFooter && <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
           {footer ?? "Powered by Opsaky"}
-        </footer>
+        </footer>}
       </main>
     </div>
   );

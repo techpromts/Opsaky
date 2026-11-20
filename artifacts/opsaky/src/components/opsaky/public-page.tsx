@@ -66,7 +66,7 @@ export function PublicPage({ slug, initialPage }: { slug: string; initialPage?: 
   }
   if (page === undefined) return <div className="ops-canvas"><PublicSkeleton /></div>;
   if (page === null) return <NotActive slug={slug} />;
-  return <Storefront title={page.title} config={page.config} footer={<a href="/" className="hover:opacity-100">Powered by Opsaky</a>} />;
+  return <Storefront title={page.title} config={page.config} hideFooter />;
 }
 
 export function DemoPreview({ slug }: { slug: string }) {

@@ -8,7 +8,7 @@ import {
   Link2, Loader2, MoreHorizontal, Palette, Plus, QrCode, RectangleHorizontal, Save, Smartphone, Square, SlidersHorizontal, Trash2, Type, Upload, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
-import { CATEGORIES, THEMES, slugify, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
+import { BUSINESS_DAYS, CATEGORIES, MAX_GALLERY_ITEMS, THEMES, slugify, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
 import { compressImage, isSupportedImageType, MAX_IMAGE_DATA_URL_LENGTH, type ImageCompressionOptions } from "@/lib/images";
 import { contrastRatio, detectPlatform } from "@/lib/links";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import { LogoMark } from "./logo";
 import { CategorySelector } from "./category-selector";
 
 const MAX_LINKS = 7;
-const MAX_GALLERY = 4;
+const MAX_GALLERY = MAX_GALLERY_ITEMS;
 const LOGO_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 400, maxHeight: 400 };
 const PAGE_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 1000 };
 
@@ -54,7 +54,7 @@ const MOBILE_SECTIONS: { id: Tab; title: string; summary: string }[] = [
   { id: "content", title: "1. Brand & Identity", summary: "Logo, page title, contact and status" },
   { id: "design", title: "2. Theme & Colors", summary: "Background, palette and typography" },
   { id: "links", title: "3. Links & Actions", summary: "Ways customers can reach you" },
-  { id: "layout", title: "4. Products / Showcase", summary: "Photos, product details and layout" },
+  { id: "layout", title: "4. Products / Showcase", summary: "Photos, layout and business hours" },
 ];
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
@@ -164,10 +164,14 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
       </Section>
 
       <Section title="Status and contact">
-        <ToggleRow title="Show live status" desc="An Open now or Closed pill under your name." checked={c.showStatus} onChange={(v) => set("showStatus", v)} testId="switch-status" />
-        {c.showStatus && (
-          <Segmented value={c.isOpen ? "open" : "closed"} onChange={(v) => set("isOpen", v === "open")} testId="seg-open" options={[{ value: "open", label: "Open now" }, { value: "closed", label: "Closed" }]} />
-        )}
+        {c.businessHoursEnabled
+          ? <p className="text-[12px] text-ink-2">Your status is automatic while business hours are enabled. Edit the schedule in Layout & Operations.</p>
+          : <>
+            <ToggleRow title="Show live status" desc="An Open now or Closed pill under your name." checked={c.showStatus} onChange={(v) => set("showStatus", v)} testId="switch-status" />
+            {c.showStatus && (
+              <Segmented value={c.isOpen ? "open" : "closed"} onChange={(v) => set("isOpen", v === "open")} testId="seg-open" options={[{ value: "open", label: "Open now" }, { value: "closed", label: "Closed" }]} />
+            )}
+          </>}
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <div className="mb-1.5 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">Phone pill</span><Switch checked={c.showPhone} onChange={(v) => set("showPhone", v)} label="Show phone" testId="switch-phone" /></div>
@@ -181,7 +185,7 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
       </Section>
       </>}
 
-      {section !== "brand" && <Section title="Showcase gallery" desc="Your best four photos, with optional title and price." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
+      {section !== "brand" && <Section title="Showcase gallery" desc="Add up to 12 optimized photos, with optional title, price, and category." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
         <div className="grid gap-3 sm:grid-cols-2">
           {c.gallery.map((g, i) => (
             <div key={g.id} className="rounded-2xl border border-line bg-white/70 p-2.5" data-testid={`gallery-item-${i}`}>
@@ -319,6 +323,9 @@ function DesignTab({ c, set, apply }: { c: PageConfig; set: Set; apply: (p: Part
 }
 
 function LayoutTab({ c, set }: { c: PageConfig; set: Set }) {
+  const updateBusinessDay = (day: typeof BUSINESS_DAYS[number]["id"], patch: Partial<PageConfig["businessHours"]["sun"]>) => {
+    set("businessHours", { ...c.businessHours, [day]: { ...c.businessHours[day], ...patch } });
+  };
   const blocks = [
     { id: "showcase", label: "Product showcase", sub: `${c.gallery.length} photo${c.gallery.length === 1 ? "" : "s"}`, icon: ImageIcon },
     { id: "links", label: "Action links", sub: `${c.links.filter((l) => l.active).length} active`, icon: Link2 },
@@ -356,8 +363,43 @@ function LayoutTab({ c, set }: { c: PageConfig; set: Set }) {
         </div>
       </Section>
       <Section title="Operations">
-        <ToggleRow title="Open now" desc={c.showStatus ? "Shown on your page." : "Enable the status pill in Content to show this."} checked={c.isOpen} onChange={(v) => set("isOpen", v)} testId="switch-open-ops" />
+        <p className="text-[12px] leading-relaxed text-ink-2">
+          {c.businessHoursEnabled
+            ? "Your page’s open or closed status is calculated from the hours below."
+            : "Your page uses the manual status setting in Brand & Identity. Turn on business hours to calculate it automatically."}
+        </p>
         <p className="mt-3 text-[12px] text-ink-2">Saved pages are automatically live when your workspace is approved. No separate publishing step is needed.</p>
+      </Section>
+      <Section title="Business hours" desc="Show live open or closed status using your local schedule."
+        aside={<Switch checked={c.businessHoursEnabled} onChange={(value) => set("businessHoursEnabled", value)} label="Use business hours" testId="switch-business-hours" />}>
+        {c.businessHoursEnabled && <>
+          <div>
+            <Label>Time zone</Label>
+            <TextInput value={c.businessHoursTimezone} onChange={(event) => set("businessHoursTimezone", event.target.value)}
+              placeholder="Asia/Amman" autoComplete="off" data-testid="input-business-hours-timezone" />
+            <p className="mt-1.5 text-[11.5px] text-muted">Enter an IANA time zone. Times below use this zone; the default is Asia/Amman.</p>
+          </div>
+          <div className="space-y-2.5">
+            {BUSINESS_DAYS.map(({ id, label }) => {
+              const hours = c.businessHours[id];
+              return (
+                <div key={id} className="grid gap-3 rounded-2xl border border-line bg-white/65 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-center">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold">{label}</span>
+                    <Switch checked={!hours.closed} onChange={(open) => updateBusinessDay(id, { closed: !open })}
+                      label={`${label} open`} testId={`switch-business-hours-${id}`} />
+                  </div>
+                  {!hours.closed && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label>Opens</Label><TextInput type="time" value={hours.open} onChange={(event) => updateBusinessDay(id, { open: event.target.value })} data-testid={`input-business-open-${id}`} /></div>
+                      <div><Label>Closes</Label><TextInput type="time" value={hours.close} onChange={(event) => updateBusinessDay(id, { close: event.target.value })} data-testid={`input-business-close-${id}`} /></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>}
       </Section>
     </div>
   );
@@ -623,7 +665,7 @@ export function Editor({ id }: { id: string }) {
                   tab === t.id ? "bg-ink text-paper shadow-lg" : "bg-white/50 text-ink-2 hover:bg-white")}>
                 <t.icon className={cn("h-4 w-4", tab === t.id && "text-lime")} />{t.label}
                 {t.id === "links" && <span className="font-mono text-[10.5px] opacity-70">{c.links.length}/7</span>}
-                {t.id === "content" && <span className="font-mono text-[10.5px] opacity-70">{c.gallery.length}/4</span>}
+                {t.id === "content" && <span className="font-mono text-[10.5px] opacity-70">{c.gallery.length}/{MAX_GALLERY}</span>}
               </button>
             ))}
           </div>
@@ -666,7 +708,7 @@ export function Editor({ id }: { id: string }) {
             <div className="mb-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-2">
               <span className="h-1.5 w-1.5 rounded-full bg-coral pulse-dot" />Live preview
             </div>
-            <PhoneFrame><Storefront title={draft.title} config={c} framed /></PhoneFrame>
+            <PhoneFrame><Storefront title={draft.title} config={c} framed hideFooter /></PhoneFrame>
           </div>
         </aside>
       </div>

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { database } from "./db";
 import { appConfigured } from "./auth";
-import { validSlug, type StorePage } from "../model";
+import { normalizePageConfig, validSlug, type StorePage } from "../model";
 import { isSavedPagePublic } from "../publication";
 
 // React cache deduplicates metadata + page reads within one request only.
@@ -12,5 +12,5 @@ export const publishedPage = cache(async (slug: string): Promise<StorePage | nul
   const page = await database().page.findUnique({ where: { slug }, include: { owner: { select: { status: true } } } });
   if (!page || !isSavedPagePublic(page)) return null;
   return { id: page.id, title: page.title, slug: page.slug, published: true,
-    config: page.config as unknown as StorePage["config"], createdAt: page.createdAt.toISOString(), updatedAt: page.updatedAt.toISOString() };
+    config: normalizePageConfig(page.config), createdAt: page.createdAt.toISOString(), updatedAt: page.updatedAt.toISOString() };
 });

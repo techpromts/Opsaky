@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { ArrowRight, Check, FlaskConical, Link2, Palette, QrCode, Smartphone } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
-import { defaultConfig, THEMES, type PageConfig } from "@/lib/model";
+import { defaultConfig, MAX_GALLERY_ITEMS, THEMES, type PageConfig } from "@/lib/model";
 import { Logo } from "./logo";
 import { Btn } from "./ui";
 import { StoreThumb } from "./storefront";
@@ -115,7 +115,7 @@ export function Landing() {
           </div>
         </div>
         <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] font-medium text-ink-2">
-          {["Up to 10 pages per account", "7 smart links with auto icons", "4-item product showcase", "WhatsApp pre-filled messages", "Manually reviewed accounts"].map((t) => (
+          {["Up to 10 pages per account", "7 smart links with auto icons", `${MAX_GALLERY_ITEMS}-item product showcase`, "WhatsApp pre-filled messages", "Manually reviewed accounts"].map((t) => (
             <li key={t} className="flex items-center gap-1.5"><Check className="h-4 w-4 text-teal" />{t}</li>
           ))}
         </ul>

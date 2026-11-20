@@ -18,6 +18,34 @@ export function detectPlatform(value: string): string {
   } catch { /* An incomplete editor value uses the generic website icon. */ }
   return "website";
 }
+export function getWhatsAppDigits(links: Array<{ url: string }>): string | null {
+  for (const { url: value } of links) {
+    const valueTrimmed = value.trim();
+    if (!valueTrimmed || detectPlatform(valueTrimmed) !== "whatsapp") continue;
+    let phone = "";
+    if (/^\+?[\d\s()-]{7,20}$/.test(valueTrimmed)) {
+      phone = valueTrimmed;
+    } else {
+      try {
+        const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(valueTrimmed) ? valueTrimmed : `https://${valueTrimmed}`);
+        phone = url.hostname.replace(/^www\./, "") === "wa.me"
+          ? url.pathname.split("/").filter(Boolean)[0] ?? ""
+          : url.searchParams.get("phone") ?? "";
+      } catch {
+        continue;
+      }
+    }
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length >= 7 && digits.length <= 20) return digits;
+  }
+  return null;
+}
+export function whatsAppOrderUrl(digits: string, itemName: string, price: string): string {
+  const name = itemName.trim() || "this item";
+  const amount = price.trim();
+  const message = `Hi! I'd like to order: ${name}${amount ? ` (${amount})` : ""}`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
 export function safeHref(value: string, message = ""): string {
   const v = value.trim();
   if (!v) return "#";

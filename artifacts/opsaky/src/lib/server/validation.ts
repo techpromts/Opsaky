@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { CATEGORIES, validSlug } from "../model";
+import { CATEGORIES, MAX_GALLERY_ITEMS, defaultBusinessHours, validSlug } from "../model";
+import { isValidBusinessHours } from "../business-hours";
 
 const text = (max: number) => z.string().max(max);
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -11,20 +12,45 @@ const linkUrl = text(2000).refine(value => {
     return ["https:", "http:", "mailto:", "tel:"].includes(u.protocol);
   } catch { return false; }
 }, "Enter a valid website, email, or phone link.");
+const hoursDay = z.object({
+  open: z.string().max(5),
+  close: z.string().max(5),
+  closed: z.boolean(),
+});
+const defaultHours = defaultBusinessHours();
+const businessHours = z.object({
+  sun: hoursDay.default(defaultHours.sun),
+  mon: hoursDay.default(defaultHours.mon),
+  tue: hoursDay.default(defaultHours.tue),
+  wed: hoursDay.default(defaultHours.wed),
+  thu: hoursDay.default(defaultHours.thu),
+  fri: hoursDay.default(defaultHours.fri),
+  sat: hoursDay.default(defaultHours.sat),
+}).default(defaultHours);
 export const configSchema = z.object({
   category: text(80), customCategories: z.array(z.string().trim().min(1).max(80)).default([]),
   bio: text(400), logo: image, logoShape: z.enum(["circle", "rounded", "cover"]),
   announcement: text(300), showAnnouncement: z.boolean(), announcementMode: z.enum(["pinned", "scroll"]),
   showStatus: z.boolean(), isOpen: z.boolean(), phone: text(40), email: text(160).refine(s => !s || z.string().email().safeParse(s).success, "Enter a valid email."),
   showPhone: z.boolean(), showEmail: z.boolean(),
+  businessHoursEnabled: z.boolean().default(false),
+  businessHoursTimezone: z.string().trim().max(80).default("Asia/Amman"),
+  businessHours,
   theme: text(40), backgroundMode: z.enum(["solid", "gradient", "image"]), background: color, gradientColor: color,
   gradientAngle: z.number().int().min(0).max(360), backgroundImage: image, blur: z.number().min(0).max(30),
   overlay: z.number().min(0).max(100), surface: color, accent: color, buttonColor: color, textColor: color,
   font: z.enum(["sans", "serif", "geometric"]), titleSize: z.number().min(16).max(64),
   material: z.enum(["glass", "shadow", "border"]), buttonShape: z.enum(["pill", "rounded", "sharp", "outline"]),
   animation: z.enum(["lift", "scale", "none"]), showcaseFirst: z.boolean(), galleryMode: z.enum(["carousel", "grid", "featured"]),
-  gallery: z.array(z.object({ id: text(80), image, title: text(100), price: text(40), category: text(80).default("") })).max(4),
+  gallery: z.array(z.object({ id: text(80), image, title: text(100), price: text(40), category: text(80).default("") })).max(MAX_GALLERY_ITEMS),
   links: z.array(z.object({ id: text(80), label: z.string().min(1).max(100), url: linkUrl, active: z.boolean(), message: text(500) })).max(7),
+}).superRefine((config, context) => {
+  if (!config.businessHoursEnabled || isValidBusinessHours(config.businessHours, config.businessHoursTimezone)) return;
+  context.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["businessHours"],
+    message: "Enter valid business hours and an IANA time zone, such as Asia/Amman.",
+  });
 });
 export const slugSchema = z.string().refine(validSlug, "Use 3–48 lowercase letters, numbers, or hyphens. This handle may be reserved.");
 export const activationSchema = z.object({

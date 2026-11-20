@@ -8,7 +8,7 @@ import {
   AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
-import { CATEGORIES, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
+import { CATEGORIES, MAX_GALLERY_ITEMS, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
 import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, Label, Modal, Skeleton, StatusBadge, TextInput } from "./ui";
@@ -321,7 +321,7 @@ function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => 
             <h3 className="font-display truncate text-lg font-bold" data-testid={`text-title-${page.id}`}>{page.title}</h3>
             <p className="truncate font-mono text-[11.5px] text-muted">/{page.slug}</p>
           </div>
-          <span className="shrink-0 rounded-full bg-paper-2 px-2 py-0.5 font-mono text-[10.5px] text-ink-2">{linkCount}/7 links · {page.config.gallery.length}/4 items</span>
+          <span className="shrink-0 rounded-full bg-paper-2 px-2 py-0.5 font-mono text-[10.5px] text-ink-2">{linkCount}/7 links · {page.config.gallery.length}/{MAX_GALLERY_ITEMS} items</span>
         </div>
         <div className="mt-4 hidden items-center gap-1.5 md:flex">
           <Link href={`${base}/edit/${page.id}`} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink text-[13px] font-semibold text-paper transition hover:bg-[#24302d]" data-testid={`button-edit-${page.id}`}>
