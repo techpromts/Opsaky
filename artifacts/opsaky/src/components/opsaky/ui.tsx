@@ -22,7 +22,9 @@ export function Btn({ variant = "ink", loading, className, children, disabled, s
       disabled={disabled || loading}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 active:scale-[.97] disabled:opacity-45 disabled:pointer-events-none select-none whitespace-nowrap",
-        size === "sm" && "h-8 px-3 text-xs", size === "md" && "h-10 px-4 text-sm", size === "lg" && "h-12 px-6 text-[15px]",
+        size === "sm" && "min-h-[36px] px-3 text-[13px]", 
+        size === "md" && "min-h-[44px] px-5 text-[14px]", 
+        size === "lg" && "min-h-[52px] px-6 text-[15px]",
         variants[variant], className)}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -34,7 +36,7 @@ export function Btn({ variant = "ink", loading, className, children, disabled, s
 export function IconBtn({ className, label, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button {...rest} aria-label={label} title={label}
-      className={cn("inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-2 transition hover:bg-ink/5 hover:text-ink disabled:opacity-30 disabled:pointer-events-none", className)}>
+      className={cn("inline-flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-full text-ink-2 transition hover:bg-ink/5 hover:text-ink disabled:opacity-30 disabled:pointer-events-none", className)}>
       {children}
     </button>
   );
@@ -42,9 +44,9 @@ export function IconBtn({ className, label, children, ...rest }: ButtonHTMLAttri
 
 export function Label({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
-    <div className="mb-1.5 flex items-baseline justify-between gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">{children}</span>
-      {hint && <span className="font-mono text-[10.5px] text-muted">{hint}</span>}
+    <div className="mb-2 flex items-baseline justify-between gap-2">
+      <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-ink-2">{children}</span>
+      {hint && <span className="font-mono text-[11px] text-muted">{hint}</span>}
     </div>
   );
 }
@@ -52,14 +54,14 @@ export function Label({ children, hint }: { children: ReactNode; hint?: ReactNod
 export function TextInput({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input {...rest}
-      className={cn("h-11 w-full rounded-xl border border-line bg-white/80 px-3.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:ring-4 focus:ring-ink/5", className)} />
+      className={cn("min-h-[44px] w-full rounded-2xl border border-line bg-white/80 px-4 text-[14px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:ring-2 focus:ring-ink/10", className)} />
   );
 }
 
 export function TextArea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea {...rest}
-      className={cn("min-h-[84px] w-full resize-y rounded-xl border border-line bg-white/80 px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:ring-4 focus:ring-ink/5", className)} />
+      className={cn("min-h-[100px] w-full resize-y rounded-2xl border border-line bg-white/80 px-4 py-3 text-[14px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:bg-white focus:ring-2 focus:ring-ink/10", className)} />
   );
 }
 
@@ -67,18 +69,18 @@ export function Switch({ checked, onChange, label, testId }: { checked: boolean;
   return (
     <button type="button" role="switch" aria-checked={checked} aria-label={label} data-testid={testId}
       onClick={() => onChange(!checked)}
-      className={cn("relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200", checked ? "bg-teal" : "bg-ink/15")}>
-      <span className={cn("inline-block h-[18px] w-[18px] rounded-full bg-white shadow transition-transform duration-200", checked ? "translate-x-[23px]" : "translate-x-[3px]")} />
+      className={cn("relative inline-flex h-[28px] w-[50px] shrink-0 items-center rounded-full transition-colors duration-200", checked ? "bg-teal" : "bg-ink/15")}>
+      <span className={cn("inline-block h-[22px] w-[22px] rounded-full bg-white shadow transition-transform duration-200", checked ? "translate-x-[25px]" : "translate-x-[3px]")} />
     </button>
   );
 }
 
 export function ToggleRow({ title, desc, checked, onChange, testId }: { title: string; desc?: string; checked: boolean; onChange: (v: boolean) => void; testId?: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-line/80 bg-white/55 px-4 py-3">
+    <div className="flex min-h-[60px] items-center justify-between gap-4 rounded-2xl border border-line/80 bg-white/55 px-4 py-3 cursor-pointer" onClick={() => onChange(!checked)}>
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-ink">{title}</div>
-        {desc && <div className="text-xs text-muted">{desc}</div>}
+        <div className="text-[14px] font-semibold text-ink">{title}</div>
+        {desc && <div className="mt-0.5 text-[12px] text-muted">{desc}</div>}
       </div>
       <Switch checked={checked} onChange={onChange} label={title} testId={testId} />
     </div>
@@ -90,7 +92,7 @@ export function Segmented<T extends string>({ value, options, onChange, testId }
     <div className="flex w-full gap-1 rounded-2xl border border-line bg-paper-2/60 p-1" data-testid={testId}>
       {options.map((o) => (
         <button key={o.value} type="button" onClick={() => onChange(o.value)} data-testid={`${testId}-${o.value}`}
-          className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-all duration-200",
+          className={cn("flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-[13px] font-semibold transition-all duration-200",
             value === o.value ? "bg-ink text-paper shadow-md" : "text-ink-2 hover:bg-white/70")}>
           {o.icon}{o.label}
         </button>
@@ -101,9 +103,9 @@ export function Segmented<T extends string>({ value, options, onChange, testId }
 
 export function Range({ value, min, max, step = 1, onChange, suffix = "", label, testId }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; suffix?: string; label: string; testId?: string }) {
   return (
-    <div>
+    <div className="py-1">
       <Label hint={`${value}${suffix}`}>{label}</Label>
-      <input type="range" className="ops-range" min={min} max={max} step={step} value={value} data-testid={testId}
+      <input type="range" className="ops-range h-6 w-full cursor-pointer accent-ink" min={min} max={max} step={step} value={value} data-testid={testId}
         onChange={(e) => onChange(Number(e.target.value))} />
     </div>
   );
@@ -113,13 +115,13 @@ export function ColorField({ label, value, onChange, testId }: { label: string; 
   return (
     <div>
       <Label>{label}</Label>
-      <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-white/80 px-2 transition hover:border-ink/40">
-        <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg border border-ink/10" style={{ background: value }}>
+      <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-2xl border border-line bg-white/80 px-2 transition hover:border-ink/40 focus-within:ring-2 focus-within:ring-ink/10">
+        <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-ink/10" style={{ background: value }}>
           <input type="color" value={value} onChange={(e) => onChange(e.target.value)} data-testid={testId}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+            className="absolute -inset-4 h-20 w-20 cursor-pointer opacity-0" />
         </span>
         <input value={value} onChange={(e) => onChange(e.target.value)} spellCheck={false}
-          className="w-full bg-transparent font-mono text-xs uppercase text-ink outline-none" />
+          className="w-full bg-transparent font-mono text-[13px] uppercase text-ink outline-none" />
       </label>
     </div>
   );
@@ -132,7 +134,7 @@ export function StatusBadge({ status, className }: { status: AccountStatus; clas
     REJECTED: { label: "Rejected", cls: "bg-ink/5 text-muted border-ink/15", dot: "bg-muted" },
   }[status];
   return (
-    <span data-testid={`status-${status.toLowerCase()}`} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider", map.cls, className)}>
+    <span data-testid={`status-${status.toLowerCase()}`} className={cn("inline-flex h-[28px] items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold uppercase tracking-wider", map.cls, className)}>
       <span className="relative flex h-2 w-2">
         {status !== "REJECTED" && <span className={cn("absolute inset-0 rounded-full pulse-dot", map.dot)} />}
         <span className={cn("relative h-2 w-2 rounded-full", map.dot)} />
@@ -147,17 +149,30 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
     if (!open) return;
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
+    // Prevent scrolling behind modal on mobile
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener("keydown", h);
+      document.body.style.overflow = 'unset';
+    };
   }, [open, onClose]);
+  
   if (!open) return null;
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
-      <div className="fade absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-label={title}
-        className={cn("pop relative w-full rounded-t-[28px] border border-white/70 bg-paper p-6 shadow-2xl sm:rounded-[28px]", wide ? "sm:max-w-2xl" : "sm:max-w-md")}>
-        <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end p-0 sm:items-center sm:justify-center sm:p-6">
+      <div className="fade absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-label={title} aria-modal="true"
+        className={cn("pop relative w-full max-h-[90dvh] overflow-y-auto rounded-t-[32px] bg-paper px-6 pb-8 pt-6 shadow-2xl sm:rounded-[32px]", wide ? "sm:max-w-2xl" : "sm:max-w-md")}>
+        
+        {/* Mobile drag handle indicator */}
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-line sm:hidden" />
+        
+        <div className="mb-6 flex items-start justify-between gap-4">
           <h2 className="font-display text-2xl font-bold text-ink">{title}</h2>
-          <IconBtn label="Close" onClick={onClose} data-testid="button-close-modal"><X className="h-4 w-4" /></IconBtn>
+          <button onClick={onClose} aria-label="Close modal" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink-2 transition hover:bg-ink/10 hover:text-ink">
+            <X className="h-5 w-5" />
+          </button>
         </div>
         {children}
       </div>
@@ -170,5 +185,5 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("glass rounded-[28px]", className)}>{children}</div>;
+  return <div className={cn("glass rounded-[32px] p-6", className)}>{children}</div>;
 }
