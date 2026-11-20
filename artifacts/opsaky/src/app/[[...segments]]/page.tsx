@@ -1,6 +1,4 @@
 import OpsakyApp from "@/components/opsaky/opsaky-app";
-import { identity } from "@/lib/server/auth";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { publishedPage } from "@/lib/server/public-page";
 import { PublicPage } from "@/components/opsaky/public-page";
@@ -36,12 +34,6 @@ export async function generateMetadata({ params }: { params: Promise<{ segments?
 }
 export default async function Page({ params }: { params: Promise<{ segments?: string[] }> }) {
   const segments = (await params).segments ?? [];
-  if (segments.length === 0 && await identity()) redirect("/dashboard");
-  if (["dashboard", "admin"].includes(segments[0] ?? "") && process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    const user = await identity();
-    if (!user) redirect("/sign-in");
-    if (segments[0] === "admin" && !user.isAdmin) redirect("/dashboard");
-  }
   if (segments.length === 1 && validSlug(segments[0])) {
     return <PublicPage key={segments[0]} slug={segments[0]} initialPage={await publishedPage(segments[0])} />;
   }
