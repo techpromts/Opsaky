@@ -108,7 +108,7 @@ function ActivationRequest() {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [phone, setPhone] = useState("");
   const [slug, setSlug] = useState("");
-  const [touchedSlug, setTouched] = useState(false);
+  const [touchedSlug, setTouchedSlug] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const effectiveSlug = touchedSlug ? slug : slugify(businessName);
