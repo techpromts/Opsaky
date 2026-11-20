@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X,
+  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X, QrCode
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
 import { CATEGORIES, MAX_GALLERY_ITEMS, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
@@ -58,14 +58,14 @@ export function HandleHint({ state }: { state: ReturnType<typeof useHandleCheck>
   return <p data-testid="text-handle-status" className={cn("mt-1.5 flex items-center gap-1.5 text-[12px] font-medium", m.c)}>{m.i}{m.t}</p>;
 }
 
-/* ---------- Gate screens ---------- */
+/* ---------- Gate screens (Kept intact) ---------- */
 function LoadingWorkspace() {
   return (
     <div className="pt-10">
       <Skeleton className="h-10 w-72" />
       <Skeleton className="mt-3 h-5 w-96 max-w-full" />
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[440px] rounded-[28px]" />)}
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[200px] rounded-[28px]" />)}
       </div>
     </div>
   );
@@ -227,7 +227,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-/* ---------- Create page ---------- */
+/* ---------- Create page Modal ---------- */
 function CreatePageModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ws = useWorkspace();
   const router = useRouter();
@@ -295,74 +295,73 @@ function CreatePageModal({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
-/* ---------- Page card ---------- */
+/* ---------- Mobile-First Clean Page Card ---------- */
 function PageCard({ page, onDelete, index }: { page: StorePage; onDelete: () => void; index: number }) {
   const { isDemo, base } = useMode();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
-  const linkCount = page.config.links.filter((l) => l.active).length;
+  const theme = THEMES.find((t) => t.id === page.config.theme) || THEMES[0];
+  const url = pageUrl(page.slug, isDemo);
+
   return (
-    <article className="group rise overflow-hidden rounded-[28px] border border-white/70 bg-white/50 shadow-[0_20px_50px_-30px_rgba(23,32,30,.5)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-30px_rgba(23,32,30,.6)]"
+    <article className="group rise relative flex flex-col justify-between overflow-hidden rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:border-ink/10 hover:shadow-md"
       style={{ animationDelay: `${index * 0.05}s` }} data-testid={`card-page-${page.id}`}>
-      <div role="link" tabIndex={0} aria-label={`Edit ${page.title}`}
-        onClick={() => router.push(`${base}/edit/${page.id}`)}
-        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); router.push(`${base}/edit/${page.id}`); } }}
-        className="relative block cursor-pointer border-b border-ink/5" data-testid={`link-thumb-${page.id}`}>
-        <StoreThumb title={page.title} config={page.config} height={300} scale={0.66} />
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white/90 to-transparent" />
-        <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-2.5 py-1 text-[10.5px] font-semibold text-paper backdrop-blur">{page.config.category}</span>
-        <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-paper/90 px-2.5 py-1 text-[10.5px] font-semibold text-ink opacity-0 transition group-hover:opacity-100">
-          <Pencil className="h-3 w-3" /> Open studio
-        </span>
-      </div>
-      <div className="p-5">
-        <div className="flex flex-col items-start justify-between gap-2 sm:flex-row">
-          <div className="min-w-0">
-            <h3 className="font-display truncate text-lg font-bold" data-testid={`text-title-${page.id}`}>{page.title}</h3>
-            <p className="truncate font-mono text-[11.5px] text-muted">/{page.slug}</p>
+      
+      {/* Top Header: Avatar & Info */}
+      <div className="flex items-start gap-4">
+        {page.config.avatar ? (
+          <img src={page.config.avatar} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover border border-line" />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full font-display text-xl font-bold border border-line" style={{ background: theme.buttonColor, color: theme.background }}>
+            {page.title.charAt(0).toUpperCase()}
           </div>
-          <span className="shrink-0 rounded-full bg-paper-2 px-2 py-0.5 font-mono text-[10.5px] text-ink-2">{linkCount}/7 links · {page.config.gallery.length}/{MAX_GALLERY_ITEMS} items</span>
+        )}
+        <div className="min-w-0 flex-1 pt-1">
+          <h3 className="font-display truncate text-lg font-bold leading-tight" data-testid={`text-title-${page.id}`}>{page.title}</h3>
+          <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
+            <span className="truncate font-mono text-[12px] text-muted">/{page.slug}</span>
+            <button onClick={() => copyText(url, "Link copied!")} className="shrink-0 p-1 text-ink-2 transition hover:text-ink" aria-label="Copy link">
+              <Copy className="h-3 w-3" />
+            </button>
+          </div>
         </div>
-        <div className="mt-4 hidden items-center gap-1.5 md:flex">
-          <Link href={`${base}/edit/${page.id}`} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-ink text-[13px] font-semibold text-paper transition hover:bg-[#24302d]" data-testid={`button-edit-${page.id}`}>
-            <Pencil className="h-3.5 w-3.5" /> Edit
-          </Link>
-          <button onClick={() => copyText(pageUrl(page.slug, isDemo), isDemo ? "Local preview link copied (this browser only)" : "Page link copied")}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" title="Copy link" data-testid={`button-share-${page.id}`}>
-            <Copy className="h-3.5 w-3.5" />
-          </button>
-          <a href={pageUrl(page.slug, isDemo)} target="_blank" rel="noreferrer"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" title={isDemo ? "Open local preview" : "Open public page"} data-testid={`link-open-${page.id}`}>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-          <button onClick={onDelete} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 text-ink-2 transition hover:border-stop/40 hover:bg-stop/10 hover:text-stop" title="Delete" data-testid={`button-delete-${page.id}`}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <div className="mt-4 flex items-center gap-2 md:hidden">
-          <Link href={`${base}/edit/${page.id}`} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-ink text-[13px] font-semibold text-paper" data-testid={`button-edit-mobile-${page.id}`}>
-            <Pencil className="h-4 w-4" />Edit page
-          </Link>
-          <button type="button" aria-label={`More actions for ${page.title}`} aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-line bg-white/75" data-testid={`button-more-${page.id}`}>
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
-        </div>
+        <button onClick={() => setMoreOpen(true)} className="shrink-0 p-2 text-ink-2 hover:bg-ink/5 rounded-full" aria-label="More options">
+          <MoreHorizontal className="h-5 w-5" />
+        </button>
       </div>
+
+      {/* Quick Actions */}
+      <div className="mt-6 flex items-center gap-2">
+        <button onClick={() => router.push(`${base}/edit/${page.id}`)} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-ink text-[14px] font-semibold text-paper transition hover:bg-[#24302d]">
+          <Pencil className="h-4 w-4" /> Edit Page
+        </button>
+        <a href={url} target="_blank" rel="noreferrer" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-white text-ink transition hover:border-ink/30" aria-label="View live">
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
+
+      {/* Mobile-friendly action sheet / More options */}
       {moreOpen && createPortal((
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label={`Actions for ${page.title}`} data-testid={`drawer-page-${page.id}`}>
-          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close page actions" onClick={() => setMoreOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-white/80 bg-paper/95 p-5 shadow-2xl backdrop-blur-2xl" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="min-w-0"><h2 className="font-display text-lg font-bold">Page actions</h2><p className="truncate font-mono text-[11px] text-muted">/{page.slug}</p></div>
-              <button type="button" aria-label="Close page actions" onClick={() => setMoreOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5"><X className="h-4 w-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-6 pt-10 sm:items-center sm:p-0" role="dialog" aria-modal="true">
+          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close" onClick={() => setMoreOpen(false)} />
+          <div className="relative w-full max-w-sm rounded-[32px] bg-paper p-6 shadow-2xl rise">
+             <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold text-ink">{page.title}</h2>
+                <p className="font-mono text-[11px] text-muted">/{page.slug}</p>
+              </div>
+              <button onClick={() => setMoreOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-ink/5 text-ink-2"><X className="h-4 w-4" /></button>
             </div>
-            <div className="space-y-2">
-              <button type="button" onClick={() => { setMoreOpen(false); void copyText(pageUrl(page.slug, isDemo), isDemo ? "Local preview link copied (this browser only)" : "Page link copied"); }}
-                className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid={`menu-copy-${page.id}`}><Copy className="h-4 w-4" />Copy page URL</button>
-              <a href={pageUrl(page.slug, isDemo)} target="_blank" rel="noreferrer" onClick={() => setMoreOpen(false)}
-                className="flex min-h-12 items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid={`menu-open-${page.id}`}><ExternalLink className="h-4 w-4" />{isDemo ? "Open local preview" : "Open public page"}</a>
-              <button type="button" onClick={() => { setMoreOpen(false); onDelete(); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-stop/5 px-4 text-sm font-semibold text-stop" data-testid={`menu-delete-${page.id}`}><Trash2 className="h-4 w-4" />Delete page</button>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { setMoreOpen(false); void copyText(url, "Link copied!"); }} className="flex h-12 items-center gap-3 rounded-2xl bg-ink/5 px-4 text-sm font-semibold text-ink hover:bg-ink/10">
+                <Copy className="h-4 w-4" /> Copy link
+              </button>
+              <a href={url} target="_blank" rel="noreferrer" onClick={() => setMoreOpen(false)} className="flex h-12 items-center gap-3 rounded-2xl bg-ink/5 px-4 text-sm font-semibold text-ink hover:bg-ink/10">
+                <ExternalLink className="h-4 w-4" /> View public page
+              </a>
+              <button onClick={() => { setMoreOpen(false); onDelete(); }} className="flex h-12 items-center gap-3 rounded-2xl bg-stop/10 px-4 text-sm font-semibold text-stop hover:bg-stop/20">
+                <Trash2 className="h-4 w-4" /> Delete page
+              </button>
             </div>
           </div>
         </div>
@@ -388,6 +387,7 @@ function Workspace() {
     ws.pages.forEach((p) => { m[p.config.category] = (m[p.config.category] ?? 0) + 1; });
     return m;
   }, [ws.pages]);
+  
   const categoryFilters = useMemo(() => ["All", ...new Set([...CATEGORIES, ...ws.pages.map((p) => p.config.category).filter(Boolean)])], [ws.pages]);
   const filtered = useMemo(() => ws.pages.filter((p) =>
     (cat === "All" || p.config.category === cat) &&
@@ -403,42 +403,37 @@ function Workspace() {
 
   const name = isDemo ? "Demo studio" : ws.session.account?.businessName || "Your studio";
   return (
-    <div className="pt-8 sm:pt-12">
+    <div className="pt-4 sm:pt-8 mx-auto max-w-lg md:max-w-6xl">
       <div className="rise flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isDemo ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-ink/30 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-ink-2"><FlaskConical className="h-3 w-3" />Browser-local demo</span>
-            ) : ws.session.account && <StatusBadge status={ws.session.account.status} />}
-          </div>
-          <h1 className="font-display mt-3 text-4xl font-extrabold leading-none sm:text-5xl" data-testid="text-workspace-name">{name}</h1>
-          <p className="mt-2 text-[15px] text-ink-2">{isDemo ? "Sample pages live in this browser. Edit, create and delete freely." : "Every page you run, in one place."}</p>
+          <h1 className="font-display text-3xl font-extrabold leading-none sm:text-4xl" data-testid="text-workspace-name">{name}</h1>
+          <p className="mt-2 text-[14px] text-ink-2">{isDemo ? "Sample pages live in this browser." : "Manage your showcase pages."}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="font-mono text-[12px] text-ink-2" data-testid="text-page-count">{count} / {MAX_PAGES} pages used</div>
-            <div className="mt-1.5 flex gap-[3px]">
-              {Array.from({ length: MAX_PAGES }).map((_, i) => <span key={i} className={cn("h-1.5 w-3 rounded-full transition", i < count ? (full ? "bg-coral" : "bg-ink") : "bg-ink/10")} />)}
+        <div className="flex items-center justify-between md:justify-end gap-4 border-t border-line pt-4 md:border-none md:pt-0">
+          <div className="text-left md:text-right">
+            <div className="font-mono text-[11px] text-ink-2" data-testid="text-page-count">{count} / {MAX_PAGES} used</div>
+            <div className="mt-1 flex gap-1">
+              {Array.from({ length: MAX_PAGES }).map((_, i) => <span key={i} className={cn("h-1 w-2 rounded-full", i < count ? (full ? "bg-coral" : "bg-ink") : "bg-ink/10")} />)}
             </div>
           </div>
-          <Btn variant="coral" size="lg" onClick={() => setCreating(true)} disabled={full} data-testid="button-create-page">
-            <Plus className="h-4 w-4" /> {full ? "10 / 10 used" : "New page"}
-          </Btn>
+          <button onClick={() => setCreating(true)} disabled={full} className="flex h-11 items-center gap-2 rounded-full bg-coral px-5 text-sm font-bold text-paper transition hover:bg-[#ff5544] disabled:opacity-50">
+            <Plus className="h-4 w-4" /> {full ? "Max limit" : "New page"}
+          </button>
         </div>
       </div>
 
       {count > 0 && (
-        <div className="rise mt-8 flex flex-col gap-3 lg:flex-row lg:items-center" style={{ animationDelay: ".06s" }}>
-          <div className="relative lg:w-72">
+        <div className="rise mt-6 flex flex-col gap-3 lg:flex-row lg:items-center" style={{ animationDelay: ".06s" }}>
+          <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages" className="rounded-full pl-10" data-testid="input-search" />
+            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages..." className="rounded-2xl pl-10 h-12" data-testid="input-search" />
           </div>
-          <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
             {categoryFilters.map((c) => (
               <button key={c} onClick={() => setCat(c)} data-testid={`filter-${slugify(c)}`}
-                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[12.5px] font-semibold transition",
+                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13px] font-semibold transition",
                   cat === c ? "border-ink bg-ink text-paper" : "border-line bg-white/50 text-ink-2 hover:border-ink/30")}>
-                {c}<span className={cn("font-mono text-[10.5px]", cat === c ? "text-lime" : "text-muted")}>{counts[c] ?? 0}</span>
+                {c}<span className={cn("font-mono text-[10px]", cat === c ? "text-lime" : "text-muted")}>{counts[c] ?? 0}</span>
               </button>
             ))}
           </div>
@@ -446,50 +441,35 @@ function Workspace() {
       )}
 
       {count === 0 ? (
-        <div className="rise mt-10 grid items-center gap-8 overflow-hidden rounded-[32px] border border-dashed border-ink/20 bg-white/40 p-8 sm:p-12 md:grid-cols-[1.2fr_1fr]">
-          <div>
-            <span className="font-mono text-[12px] text-coral">empty shelf</span>
-            <h2 className="font-display mt-2 text-3xl font-bold">Your first page is one click away.</h2>
-            <p className="mt-2 max-w-md text-ink-2">Pick a preset, name it, and the studio opens with a live phone preview beside you.</p>
-            <Btn variant="coral" size="lg" className="mt-6" onClick={() => setCreating(true)} data-testid="button-create-first"><Plus className="h-4 w-4" />Create your first page</Btn>
-          </div>
-          <div className="flex justify-center gap-3">
-            {THEMES.slice(0, 3).map((t, i) => (
-              <div key={t.id} className="float h-48 w-24 rounded-[22px] border-4 border-ink p-2" style={{ background: t.background, ["--r" as string]: `${(i - 1) * 6}deg`, animationDelay: `${i * -1.5}s` } as CSSProperties}>
-                <div className="mx-auto mt-2 h-8 w-8 rounded-full" style={{ background: t.accent }} />
-                {[0, 1, 2].map((k) => <div key={k} className="mt-2 h-4 rounded-full" style={{ background: t.buttonColor, opacity: 1 - k * 0.2 }} />)}
-              </div>
-            ))}
-          </div>
+        <div className="rise mt-8 rounded-[32px] border border-dashed border-ink/20 bg-white/40 p-8 text-center sm:p-12">
+          <h2 className="font-display text-2xl font-bold">Your shelf is empty.</h2>
+          <p className="mt-2 text-sm text-ink-2">Create your first page to start selling on WhatsApp.</p>
+          <button onClick={() => setCreating(true)} className="mx-auto mt-6 flex h-12 items-center gap-2 rounded-full bg-ink px-6 text-sm font-semibold text-paper">
+            <Plus className="h-4 w-4" /> Create first page
+          </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="mt-10 rounded-[28px] border border-dashed border-ink/20 bg-white/40 p-10 text-center">
+        <div className="mt-8 rounded-[28px] border border-dashed border-ink/20 bg-white/40 p-10 text-center">
           <Search className="mx-auto h-6 w-6 text-muted" />
-          <p className="mt-3 font-semibold">Nothing matches that filter.</p>
-          <Btn variant="soft" size="sm" className="mt-4" onClick={() => { setQ(""); setCat("All"); }} data-testid="button-clear-filters">Clear filters</Btn>
+          <p className="mt-3 font-semibold">No pages match your search.</p>
+          <Btn variant="soft" size="sm" className="mt-4 mx-auto" onClick={() => { setQ(""); setCat("All"); }}>Clear filters</Btn>
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p, i) => <PageCard key={p.id} page={p} index={i} onDelete={() => setToDelete(p)} />)}
-          {!full && (
-            <button onClick={() => setCreating(true)} data-testid="button-create-tile"
-              className="group flex min-h-[300px] flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-ink/15 text-ink-2 transition hover:border-coral hover:bg-coral/5 hover:text-coral">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-paper transition group-hover:rotate-90 group-hover:bg-coral"><Plus className="h-5 w-5" /></span>
-              <span className="mt-3 text-sm font-semibold">New page</span>
-              <span className="font-mono text-[11px] text-muted">{MAX_PAGES - count} remaining</span>
-            </button>
-          )}
         </div>
       )}
 
       <CreatePageModal open={creating} onClose={() => setCreating(false)} />
+      
+      {/* Delete Confirmation Modal */}
       <Modal open={!!toDelete} onClose={() => !deleting && setToDelete(null)} title="Delete this page?">
         <p className="text-[14px] text-ink-2">
-          <b className="text-ink">{toDelete?.title}</b> and its links, photos and settings will be removed{isDemo ? " from this browser" : ""}. {isDemo || !toDelete ? "" : `${displayUrl(toDelete.slug, false)} will stop working.`} This cannot be undone.
+          <b className="text-ink">{toDelete?.title}</b> and its items will be permanently removed. This cannot be undone.
         </p>
         <div className="mt-6 flex justify-end gap-2">
-          <Btn variant="ghost" onClick={() => setToDelete(null)} disabled={deleting}>Keep it</Btn>
-          <Btn variant="danger" onClick={confirmDelete} loading={deleting} data-testid="button-confirm-delete"><Trash2 className="h-4 w-4" />Delete page</Btn>
+          <Btn variant="ghost" onClick={() => setToDelete(null)} disabled={deleting}>Cancel</Btn>
+          <Btn variant="danger" onClick={confirmDelete} loading={deleting}><Trash2 className="h-4 w-4" /> Delete</Btn>
         </div>
       </Modal>
     </div>
@@ -511,4 +491,3 @@ export function Dashboard() {
   else body = <Workspace />;
   return <AppShell>{body}</AppShell>;
 }
-
