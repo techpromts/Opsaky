@@ -1,18 +1,17 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X, QrCode
+  AlertTriangle, ArrowRight, Check, Copy, ExternalLink, FlaskConical, Hourglass, Loader2, Lock, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Settings2, Trash2, X,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace";
-import { CATEGORIES, MAX_GALLERY_ITEMS, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
+import { CATEGORIES, THEMES, slugify, validSlug, type StorePage } from "@/lib/model";
 import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, Label, Modal, Skeleton, StatusBadge, TextInput } from "./ui";
-import { StoreThumb } from "./storefront";
 import { displayUrl, pageUrl } from "@/lib/urls";
 export { displayUrl, pageUrl } from "@/lib/urls";
 
