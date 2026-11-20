@@ -129,12 +129,11 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const font = FONT_STACKS[c.font];
   const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
 
-  // Sync document background color on public mobile viewports so iOS Safari bottom bar & overscroll never show a beige strip
   useEffect(() => {
     if (framed || typeof document === "undefined") return;
     const prevBodyBg = document.body.style.backgroundColor;
     const prevHtmlBg = document.documentElement.style.backgroundColor;
-    const targetBg = imageBackground ? "#0b0d0c" : c.background;
+    const targetBg = imageBackground ? "#090a09" : c.background;
     document.body.style.backgroundColor = targetBg;
     document.documentElement.style.backgroundColor = targetBg;
     return () => {
@@ -143,7 +142,6 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     };
   }, [framed, imageBackground, c.background]);
 
-  // Liquid Glass / Glassmorphism surface style
   const glassStyle: CSSProperties = {
     background: rgba(c.surface, imageBackground ? 0.56 : 0.72),
     backdropFilter: "blur(24px) saturate(165%)",
@@ -328,12 +326,11 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       className={cn("relative isolate w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
       style={{ ...bg, color: c.textColor, fontFamily: font }}
     >
-      {/* Full-bleed edge-to-edge fixed background covering iOS Safari bottom bar & overscroll */}
       {imageBackground && (
         <div
           className={cn(
             "pointer-events-none -z-10 overflow-hidden",
-            framed ? "absolute inset-0 h-full w-full" : "fixed -inset-y-16 inset-x-0 h-[calc(100lvh+8rem)] w-screen"
+            framed ? "absolute inset-0 h-full w-full" : "fixed -inset-[20%] h-[140lvh] w-[140vw]"
           )}
         >
           <img
@@ -360,21 +357,18 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
 
       <main
         className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}
-        style={{ paddingBottom: framed ? "2.5rem" : "calc(env(safe-area-inset-bottom) + 4rem)" }}
+        style={{ paddingBottom: framed ? "2.5rem" : "calc(env(safe-area-inset-bottom) + 4.5rem)" }}
       >
         <header className="relative text-center">
-          {/* Avatar / Logo floating slightly above the glass card */}
           <div className="relative z-10">
             {logo}
             {c.logoShape !== "cover" && initialBadge}
           </div>
 
-          {/* Refined Editorial Liquid Glass Header */}
           <div
             className={cn("relative px-6 pb-6", c.logoShape !== "cover" ? "-mt-10 pt-14" : "mt-4 pt-6")}
             style={glassStyle}
           >
-            {/* Subtle Editorial Category Eyebrow */}
             {c.category && (
               <div
                 className="text-[10.5px] font-extrabold uppercase tracking-[0.22em]"
@@ -384,7 +378,6 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
               </div>
             )}
 
-            {/* Brand Title */}
             <h1
               className="mt-1.5 font-extrabold tracking-tight leading-[1.08]"
               style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}
@@ -392,23 +385,21 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
               {title || "Untitled page"}
             </h1>
 
-            {/* Bio */}
             {c.bio && (
               <p className="mx-auto mt-2 max-w-[32ch] text-[13.5px] leading-relaxed opacity-75">
                 {c.bio}
               </p>
             )}
 
-            {/* Unified Live Status & Hours Pill + Quick Contact Actions */}
-            {(showStatusBadge || (c.showPhone && c.phone) || (c.showEmail && c.email)) && (
+            {(showStatusBadge || (c.showEmail && c.email) || (c.showPhone && c.phone)) && (
               <div
-                className="mt-5 flex flex-wrap items-center justify-center gap-2 border-t pt-4"
+                className="mt-5 flex flex-col items-center gap-2.5 border-t pt-4"
                 style={{ borderColor: rgba(c.textColor, 0.08) }}
               >
                 {showStatusBadge && (
                   <div
                     data-testid="sf-status"
-                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-bold"
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11.5px] font-bold"
                     style={{
                       background: isOpenNow ? "rgba(22, 163, 74, 0.12)" : "rgba(220, 38, 38, 0.12)",
                       color: isOpenNow ? "#15803d" : "#b91c1c",
@@ -442,35 +433,39 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
                   </div>
                 )}
 
-                {c.showPhone && c.phone && (
-                  <a
-                    href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
-                    aria-label="Call"
-                    title={c.phone}
-                    className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[11.5px] font-bold transition hover:brightness-95 active:scale-95",
-                      anim
-                    )}
-                    style={{ background: rgba(c.textColor, 0.06), color: c.textColor }}
-                  >
-                    <Phone className="h-3.5 w-3.5" style={{ color: c.accent }} />
-                    <span>Call</span>
-                  </a>
-                )}
-
                 {c.showEmail && c.email && (
                   <a
                     href={interactive ? `mailto:${c.email}` : undefined}
-                    aria-label="Email"
-                    title={c.email}
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[11.5px] font-bold transition hover:brightness-95 active:scale-95",
+                      "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
                       anim
                     )}
-                    style={{ background: rgba(c.textColor, 0.06), color: c.textColor }}
+                    style={{
+                      background: rgba("#ffffff", 0.55),
+                      border: `1px solid ${rgba("#ffffff", 0.65)}`,
+                      color: c.textColor,
+                    }}
                   >
-                    <Mail className="h-3.5 w-3.5" style={{ color: c.accent }} />
-                    <span>Email</span>
+                    <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
+                    <span className="truncate">{c.email}</span>
+                  </a>
+                )}
+
+                {c.showPhone && c.phone && (
+                  <a
+                    href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
+                    className={cn(
+                      "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
+                      anim
+                    )}
+                    style={{
+                      background: rgba("#ffffff", 0.55),
+                      border: `1px solid ${rgba("#ffffff", 0.65)}`,
+                      color: c.textColor,
+                    }}
+                  >
+                    <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
+                    <span className="truncate">{c.phone}</span>
                   </a>
                 )}
               </div>
@@ -508,7 +503,6 @@ export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { titl
   );
 }
 
-/* Realistic iPhone 15/16 Pro Dimensions (393x852 viewport ratio) */
 export function PhoneFrame({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
@@ -517,10 +511,7 @@ export function PhoneFrame({ children, className }: { children: ReactNode; class
         className
       )}
     >
-      {/* Dynamic Island */}
       <div className="pointer-events-none absolute left-1/2 top-[22px] z-30 h-[26px] w-[104px] -translate-x-1/2 rounded-full bg-black shadow-inner" />
-      
-      {/* Realistic 19.5:9 Mobile Screen */}
       <div className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full overflow-y-auto overflow-x-hidden rounded-[40px] bg-paper">
         {children}
       </div>
