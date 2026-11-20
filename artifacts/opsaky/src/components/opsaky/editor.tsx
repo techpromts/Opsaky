@@ -43,19 +43,14 @@ async function preparePageImages(page: StorePage): Promise<StorePage> {
   ]);
   return { ...page, config: { ...page.config, logo, backgroundImage, gallery } };
 }
-type Tab = "content" | "design" | "layout" | "links";
+type Tab = "brand" | "items" | "links" | "design";
 const TABS: { id: Tab; label: string; icon: typeof Type }[] = [
-  { id: "content", label: "Content", icon: Type },
-  { id: "design", label: "Design & Colors", icon: Palette },
-  { id: "layout", label: "Layout & Operations", icon: LayoutPanelTop },
-  { id: "links", label: "Links", icon: Link2 },
+  { id: "brand", label: "Brand", icon: Type },
+  { id: "items", label: "Items", icon: LayoutPanelTop },
+  { id: "links", label: "Links & Hours", icon: Link2 },
+  { id: "design", label: "Design", icon: Palette },
 ];
-const MOBILE_SECTIONS: { id: Tab; title: string; summary: string }[] = [
-  { id: "content", title: "1. Brand & Identity", summary: "Logo, page title, contact and status" },
-  { id: "design", title: "2. Theme & Colors", summary: "Background, palette and typography" },
-  { id: "links", title: "3. Links & Actions", summary: "Ways customers can reach you" },
-  { id: "layout", title: "4. Products / Showcase", summary: "Photos, layout and business hours" },
-];
+
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 function Section({ title, desc, children, aside }: { title: string; desc?: string; children: ReactNode; aside?: ReactNode }) {
@@ -111,7 +106,7 @@ function useUploader() {
 /* ---------------- Tabs ---------------- */
 type Set = <K extends keyof PageConfig>(k: K, v: PageConfig[K]) => void;
 
-function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set; section?: "all" | "brand" | "showcase" }) {
+function BrandTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set }) {
   const up = useUploader();
   const categories = [...new Set([...CATEGORIES, ...(c.customCategories ?? [])])];
   const addCustomCategory = (category: string) => {
@@ -119,11 +114,9 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
       set("customCategories", [...(c.customCategories ?? []), category]);
     }
   };
-  const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   return (
     <div className="space-y-5">
-      {section !== "showcase" && <>
-      <Section title="Brand" desc="Logo, name and the line people read first.">
+      <Section title="Brand & Identity" desc="Logo, name, and bio.">
         <div className="flex items-center gap-4">
           <div className={cn("flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden border border-line bg-paper-2", c.logoShape === "circle" ? "rounded-full" : c.logoShape === "rounded" ? "rounded-2xl" : "rounded-lg w-28")}>
             {c.logo ? <img src={c.logo} alt="Logo" className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 text-muted" />}
@@ -147,8 +140,7 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
         </div>
         <div>
           <Label>Category tag</Label>
-          <CategorySelector value={c.category} categories={categories} onChange={(value) => set("category", value)}
-            onCreate={addCustomCategory} testId="select-category" />
+          <CategorySelector value={c.category} categories={categories} onChange={(value) => set("category", value)} onCreate={addCustomCategory} testId="select-category" />
         </div>
         <div>
           <Label hint={`${c.bio.length}/160`}>Bio / tagline</Label>
@@ -156,36 +148,41 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
         </div>
       </Section>
 
-      <Section title="Announcement bar" desc="A thin banner across the top of your page." aside={<Switch checked={c.showAnnouncement} onChange={(v) => set("showAnnouncement", v)} label="Show announcement" testId="switch-announcement" />}>
+      <Section title="Background Image">
+        <div className="flex items-center gap-3">
+          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2">
+             {c.backgroundImage ? <img src={c.backgroundImage} alt="Background" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-6 w-6 text-muted" /></div>}
+          </div>
+          <UploadButton label={c.backgroundImage ? "Replace image" : "Upload image"} testId="input-bg-image" busy={up.busyKey === "bg"} onFile={(f) => {
+              set("backgroundMode", "image");
+              up.run("bg", f, PAGE_IMAGE_SIZE, (d) => set("backgroundImage", d));
+          }} />
+          {c.backgroundImage && <Btn type="button" size="sm" variant="ghost" onClick={() => { set("backgroundImage", ""); set("backgroundMode", "solid"); }}>Remove</Btn>}
+        </div>
+      </Section>
+      
+       <Section title="Announcement" aside={<Switch checked={c.showAnnouncement} onChange={(v) => set("showAnnouncement", v)} label="Show banner" testId="switch-announcement" />}>
         <div className={cn("space-y-4 transition", !c.showAnnouncement && "pointer-events-none opacity-40")}>
           <TextInput value={c.announcement} maxLength={120} onChange={(e) => set("announcement", e.target.value)} placeholder="Free delivery on orders over 20 JOD" data-testid="input-announcement" />
-          <Segmented value={c.announcementMode} onChange={(v) => set("announcementMode", v)} testId="seg-announcement-mode" options={[{ value: "pinned", label: "Pinned" }, { value: "scroll", label: "Scrolling" }]} />
         </div>
       </Section>
+    </div>
+  );
+}
 
-      <Section title="Status and contact">
-        {c.businessHoursEnabled
-          ? <p className="text-[12px] text-ink-2">Your status is automatic while business hours are enabled. Edit the schedule in Layout & Operations.</p>
-          : <>
-            <ToggleRow title="Show live status" desc="An Open now or Closed pill under your name." checked={c.showStatus} onChange={(v) => set("showStatus", v)} testId="switch-status" />
-            {c.showStatus && (
-              <Segmented value={c.isOpen ? "open" : "closed"} onChange={(v) => set("isOpen", v === "open")} testId="seg-open" options={[{ value: "open", label: "Open now" }, { value: "closed", label: "Closed" }]} />
-            )}
-          </>}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <div className="mb-1.5 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">Phone pill</span><Switch checked={c.showPhone} onChange={(v) => set("showPhone", v)} label="Show phone" testId="switch-phone" /></div>
-            <TextInput value={c.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+962 79 000 0000" inputMode="tel" data-testid="input-contact-phone" />
-          </div>
-          <div>
-            <div className="mb-1.5 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">Email pill</span><Switch checked={c.showEmail} onChange={(v) => set("showEmail", v)} label="Show email" testId="switch-email" /></div>
-            <TextInput value={c.email} onChange={(e) => set("email", e.target.value)} placeholder="hello@yourshop.com" type="email" data-testid="input-contact-email" />
-          </div>
-        </div>
-      </Section>
-      </>}
+function ItemsTab({ c, set }: { c: PageConfig; set: Set }) {
+  const up = useUploader();
+  const categories = [...new Set([...CATEGORIES, ...(c.customCategories ?? [])])];
+  const addCustomCategory = (category: string) => {
+    if (!categories.some((existing) => existing.toLocaleLowerCase() === category.toLocaleLowerCase())) {
+      set("customCategories", [...(c.customCategories ?? []), category]);
+    }
+  };
+  const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
 
-      {section !== "brand" && <Section title="Showcase gallery" desc="Add up to 12 optimized photos, with optional title, price, and category." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
+  return (
+    <div className="space-y-5">
+      <Section title="Products / Showcase" desc="Add up to 12 items. Customers order these directly via WhatsApp." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
         <div className="grid gap-3 sm:grid-cols-2">
           {c.gallery.map((g, i) => (
             <div key={g.id} className="rounded-2xl border border-line bg-white/70 p-2.5" data-testid={`gallery-item-${i}`}>
@@ -203,8 +200,7 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
               </div>
               <div className="mt-2">
                 <Label>Product category</Label>
-                <CategorySelector value={g.category ?? ""} categories={categories} onChange={(category) => updateItem(g.id, { category })}
-                  onCreate={addCustomCategory} allowEmpty testId={`select-gallery-category-${i}`} />
+                <CategorySelector value={g.category ?? ""} categories={categories} onChange={(category) => updateItem(g.id, { category })} onCreate={addCustomCategory} allowEmpty testId={`select-gallery-category-${i}`} />
               </div>
               <div className="mt-2"><UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, PAGE_IMAGE_SIZE, (d) => updateItem(g.id, { image: d }))} /></div>
             </div>
@@ -219,30 +215,91 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
             </label>
           )}
         </div>
-      </Section>}
+      </Section>
     </div>
   );
 }
 
-function ContrastPill({ a, b, label }: { a: string; b: string; label: string }) {
-  let r = 1;
-  try { r = contrastRatio(a, b); } catch { r = 1; }
-  const ok = r >= 4.5, meh = r >= 3;
+function LinksAndHoursTab({ c, set }: { c: PageConfig; set: Set }) {
+  const update = (id: string, patch: Partial<SmartLink>) => set("links", c.links.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  const move = (i: number, d: number) => { const a = [...c.links]; [a[i], a[i + d]] = [a[i + d], a[i]]; set("links", a); };
+  const active = c.links.filter((l) => l.active).length;
+  
+  const updateBusinessDay = (day: typeof BUSINESS_DAYS[number]["id"], patch: Partial<PageConfig["businessHours"]["sun"]>) => {
+    set("businessHours", { ...c.businessHours, [day]: { ...c.businessHours[day], ...patch } });
+  };
+
   return (
-    <div className="flex items-center justify-between rounded-xl border border-line bg-white/60 px-3 py-2 text-[12px]">
-      <span className="flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold" style={{ background: b, color: a }}>Aa</span>{label}</span>
-      <span className={cn("rounded-full px-2 py-0.5 font-mono font-semibold", ok ? "bg-go/10 text-go" : meh ? "bg-coral/10 text-coral-deep" : "bg-stop/10 text-stop")}>
-        {r.toFixed(2)}:1 {ok ? "Readable" : meh ? "Large text only" : "Hard to read"}
-      </span>
+    <div className="space-y-5">
+      <Section title="WhatsApp Orders" desc="Set the WhatsApp number used when a customer orders an item.">
+        <TextInput value={c.phone} onChange={(e) => set("phone", e.target.value)} placeholder="e.g. 962790000000" inputMode="tel" data-testid="input-contact-phone" />
+        <p className="mt-1.5 text-[11.5px] text-muted">Include country code without '+'. This enables the 'Order on WhatsApp' button on your showcase items.</p>
+      </Section>
+      
+      <Section title="Social & Location Links" desc="Add links to your Instagram, Location, Menu, etc." aside={<div className="flex items-center gap-2"><span className="text-[11px] text-muted">{active} visible</span><Counter n={c.links.length} max={MAX_LINKS} /></div>}>
+        {c.links.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-ink/15 p-6 text-center">
+            <p className="mt-3 text-sm font-semibold">No links yet</p>
+          </div>
+        )}
+        {c.links.map((l, i) => (
+          <div key={l.id} className={cn("rounded-2xl border bg-white/75 p-3 transition", l.active ? "border-line" : "border-dashed border-ink/20 opacity-70")} data-testid={`link-row-${i}`}>
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink text-paper"><PlatformIcon url={l.url} /></span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-2">{l.url ? platformName(l.url) : "New link"}</span>
+              <div className="ml-auto flex items-center">
+                <IconBtn label="Move up" disabled={i === 0} onClick={() => move(i, -1)} data-testid={`button-link-up-${i}`}><ArrowUp className="h-4 w-4" /></IconBtn>
+                <IconBtn label="Move down" disabled={i === c.links.length - 1} onClick={() => move(i, 1)} data-testid={`button-link-down-${i}`}><ArrowDown className="h-4 w-4" /></IconBtn>
+                <IconBtn label={l.active ? "Hide link" : "Show link"} onClick={() => update(l.id, { active: !l.active })} data-testid={`button-link-toggle-${i}`}>{l.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</IconBtn>
+                <IconBtn label="Delete link" className="hover:text-stop" onClick={() => set("links", c.links.filter((x) => x.id !== l.id))} data-testid={`button-link-delete-${i}`}><Trash2 className="h-4 w-4" /></IconBtn>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.4fr]">
+              <TextInput value={l.label} onChange={(e) => update(l.id, { label: e.target.value })} placeholder="Button label" className="h-10 text-[13px]" data-testid={`input-link-label-${i}`} />
+              <TextInput value={l.url} onChange={(e) => update(l.id, { url: e.target.value })} placeholder="https://instagram.com/you" className="h-10 font-mono text-[12px]" data-testid={`input-link-url-${i}`} />
+            </div>
+          </div>
+        ))}
+        <Btn type="button" variant="outline" className="w-full" disabled={c.links.length >= MAX_LINKS} data-testid="button-add-link"
+          onClick={() => set("links", [...c.links, { id: uid(), label: "", url: "", active: true, message: "" }])}>
+          <Plus className="h-4 w-4" />{c.links.length >= MAX_LINKS ? "7 / 7 links used" : "Add link"}
+        </Btn>
+      </Section>
+
+      <Section title="Business hours" desc="Auto-updates the Open/Closed status."
+        aside={<Switch checked={c.businessHoursEnabled} onChange={(value) => set("businessHoursEnabled", value)} label="Use business hours" testId="switch-business-hours" />}>
+        {c.businessHoursEnabled && <>
+          <div className="space-y-2.5">
+            {BUSINESS_DAYS.map(({ id, label }) => {
+              const hours = c.businessHours[id];
+              return (
+                <div key={id} className="grid gap-3 rounded-2xl border border-line bg-white/65 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-center">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold">{label}</span>
+                    <Switch checked={!hours.closed} onChange={(open) => updateBusinessDay(id, { closed: !open })}
+                      label={`${label} open`} testId={`switch-business-hours-${id}`} />
+                  </div>
+                  {!hours.closed && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><TextInput type="time" value={hours.open} onChange={(event) => updateBusinessDay(id, { open: event.target.value })} data-testid={`input-business-open-${id}`} /></div>
+                      <div><TextInput type="time" value={hours.close} onChange={(event) => updateBusinessDay(id, { close: event.target.value })} data-testid={`input-business-close-${id}`} /></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>}
+      </Section>
     </div>
   );
 }
+
 
 function DesignTab({ c, set, apply }: { c: PageConfig; set: Set; apply: (p: Partial<PageConfig>) => void }) {
-  const up = useUploader();
   return (
-    <div className="space-y-4">
-      <Section title="Theme presets" desc="One click sets every color. Tune afterwards.">
+    <div className="space-y-5">
+      <Section title="Theme presets" desc="One click sets every color.">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {THEMES.map((t) => (
             <button key={t.id} type="button" data-testid={`button-theme-${t.id}`}
@@ -257,213 +314,19 @@ function DesignTab({ c, set, apply }: { c: PageConfig; set: Set; apply: (p: Part
         </div>
       </Section>
 
-      <Section title="Background">
-        <Segmented value={c.backgroundMode} onChange={(v) => set("backgroundMode", v)} testId="seg-bg-mode" options={[{ value: "solid", label: "Solid" }, { value: "gradient", label: "Gradient" }, { value: "image", label: "Image" }]} />
-        {c.backgroundMode !== "image" && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ColorField label={c.backgroundMode === "gradient" ? "From" : "Color"} value={c.background} onChange={(v) => set("background", v)} testId="color-background" />
-            {c.backgroundMode === "gradient" && <ColorField label="To" value={c.gradientColor} onChange={(v) => set("gradientColor", v)} testId="color-gradient" />}
-          </div>
-        )}
-        {c.backgroundMode === "gradient" && (
-          <div className="flex items-end gap-4">
-            <div className="flex-1"><Range label="Angle" value={c.gradientAngle} min={0} max={360} suffix="deg" onChange={(v) => set("gradientAngle", v)} testId="range-angle" /></div>
-            <div className="h-11 w-11 shrink-0 rounded-full border border-line" style={{ background: `linear-gradient(${c.gradientAngle}deg, ${c.background}, ${c.gradientColor})` }} />
-          </div>
-        )}
-        {c.backgroundMode === "image" && (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2">{c.backgroundImage && <img src={c.backgroundImage} alt="Background" className="h-full w-full object-cover" />}</div>
-              <UploadButton label={c.backgroundImage ? "Replace image" : "Upload image"} testId="input-bg-image" busy={up.busyKey === "bg"} onFile={(f) => up.run("bg", f, PAGE_IMAGE_SIZE, (d) => set("backgroundImage", d))} />
-              {c.backgroundImage && <Btn type="button" size="sm" variant="ghost" onClick={() => set("backgroundImage", "")}>Remove</Btn>}
-            </div>
-            <Range label="Blur" value={c.blur} min={0} max={20} suffix="px" onChange={(v) => set("blur", v)} testId="range-blur" />
-            <Range label="Dark overlay" value={c.overlay} min={0} max={85} suffix="%" onChange={(v) => set("overlay", v)} testId="range-overlay" />
-          </>
-        )}
-      </Section>
-
-      <Section title="Colors" desc="Fine-tune every surface. Readability is checked live.">
+      <Section title="Colors">
         <div className="grid gap-3 sm:grid-cols-2">
+          {c.backgroundMode !== "image" && <ColorField label="Background" value={c.background} onChange={(v) => set("background", v)} testId="color-background" />}
           <ColorField label="Card / surface" value={c.surface} onChange={(v) => set("surface", v)} testId="color-surface" />
           <ColorField label="Accent" value={c.accent} onChange={(v) => set("accent", v)} testId="color-accent" />
           <ColorField label="Button" value={c.buttonColor} onChange={(v) => set("buttonColor", v)} testId="color-button" />
           <ColorField label="Text" value={c.textColor} onChange={(v) => set("textColor", v)} testId="color-text" />
         </div>
-        <div className="space-y-2">
-          {c.backgroundMode !== "image" && <ContrastPill a={c.textColor} b={c.background} label="Text on background" />}
-          <ContrastPill a={c.textColor} b={c.surface} label="Text on cards" />
-        </div>
-      </Section>
-
-      <Section title="Typography and material">
-        <div>
-          <Label>Font</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {([["sans", "Modern Sans", '"Plus Jakarta Sans"'], ["serif", "Editorial Serif", '"Fraunces"'], ["geometric", "Bold Geometric", '"Syne"']] as const).map(([v, n, f]) => (
-              <button key={v} type="button" onClick={() => set("font", v)} data-testid={`button-font-${v}`}
-                className={cn("rounded-2xl border px-2 py-3 text-center transition", c.font === v ? "border-ink bg-ink text-paper" : "border-line bg-white/60 hover:border-ink/30")}>
-                <div className="text-2xl font-bold" style={{ fontFamily: f }}>Aa</div>
-                <div className="mt-1 text-[11px] font-semibold">{n}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <Range label="Title size" value={c.titleSize} min={20} max={44} suffix="px" onChange={(v) => set("titleSize", v)} testId="range-title-size" />
-        <div><Label>Card material</Label>
-          <Segmented value={c.material} onChange={(v) => set("material", v)} testId="seg-material" options={[{ value: "glass", label: "Glass" }, { value: "shadow", label: "Soft shadow" }, { value: "border", label: "Brutal border" }]} /></div>
-        <div><Label>Button shape</Label>
-          <Segmented value={c.buttonShape} onChange={(v) => set("buttonShape", v)} testId="seg-button-shape" options={[{ value: "pill", label: "Pill" }, { value: "rounded", label: "Rounded" }, { value: "sharp", label: "Sharp" }, { value: "outline", label: "Glass outline" }]} /></div>
-        <div><Label>Hover and tap</Label>
-          <Segmented value={c.animation} onChange={(v) => set("animation", v)} testId="seg-animation" options={[{ value: "lift", label: "Lift" }, { value: "scale", label: "Scale" }, { value: "none", label: "None" }]} /></div>
       </Section>
     </div>
   );
 }
 
-function LayoutTab({ c, set }: { c: PageConfig; set: Set }) {
-  const updateBusinessDay = (day: typeof BUSINESS_DAYS[number]["id"], patch: Partial<PageConfig["businessHours"]["sun"]>) => {
-    set("businessHours", { ...c.businessHours, [day]: { ...c.businessHours[day], ...patch } });
-  };
-  const blocks = [
-    { id: "showcase", label: "Product showcase", sub: `${c.gallery.length} photo${c.gallery.length === 1 ? "" : "s"}`, icon: ImageIcon },
-    { id: "links", label: "Action links", sub: `${c.links.filter((l) => l.active).length} active`, icon: Link2 },
-  ];
-  const ordered = c.showcaseFirst ? blocks : [...blocks].reverse();
-  return (
-    <div className="space-y-4">
-      <Section title="Section order" desc="What should visitors see first?">
-        <div className="space-y-2">
-          {ordered.map((b, i) => (
-            <div key={b.id} className="flex items-center gap-3 rounded-2xl border border-line bg-white/70 px-4 py-3 transition-all duration-300" data-testid={`order-${b.id}`}>
-              <span className="font-mono text-[11px] text-muted">0{i + 1}</span>
-              <b.icon className="h-4 w-4 text-teal" />
-              <div className="flex-1"><div className="text-sm font-semibold">{b.label}</div><div className="text-[11.5px] text-muted">{b.sub}</div></div>
-              <IconBtn label={i === 0 ? "Move down" : "Move up"} onClick={() => set("showcaseFirst", !c.showcaseFirst)} data-testid={`button-move-${b.id}`}>
-                {i === 0 ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
-              </IconBtn>
-            </div>
-          ))}
-        </div>
-      </Section>
-      <Section title="Gallery display">
-        <div className="grid grid-cols-3 gap-2">
-          {([["carousel", "Carousel"], ["grid", "2x2 Grid"], ["featured", "Featured cards"]] as const).map(([v, n]) => (
-            <button key={v} type="button" onClick={() => set("galleryMode", v)} data-testid={`button-gallery-${v}`}
-              className={cn("rounded-2xl border p-3 transition", c.galleryMode === v ? "border-ink bg-ink text-paper" : "border-line bg-white/60 hover:border-ink/30")}>
-              <div className="flex h-12 items-center justify-center gap-1">
-                {v === "carousel" && <><span className="h-10 w-7 rounded bg-current opacity-60" /><span className="h-10 w-7 rounded bg-current opacity-80" /><span className="h-10 w-3 rounded bg-current opacity-40" /></>}
-                {v === "grid" && <div className="grid grid-cols-2 gap-1">{[0, 1, 2, 3].map((k) => <span key={k} className="h-[18px] w-[18px] rounded bg-current opacity-70" />)}</div>}
-                {v === "featured" && <div className="space-y-1"><span className="block h-6 w-12 rounded bg-current opacity-70" /><span className="block h-4 w-12 rounded bg-current opacity-40" /></div>}
-              </div>
-              <div className="mt-2 text-[11.5px] font-semibold">{n}</div>
-            </button>
-          ))}
-        </div>
-      </Section>
-      <Section title="Operations">
-        <p className="text-[12px] leading-relaxed text-ink-2">
-          {c.businessHoursEnabled
-            ? "Your page’s open or closed status is calculated from the hours below."
-            : "Your page uses the manual status setting in Brand & Identity. Turn on business hours to calculate it automatically."}
-        </p>
-        <p className="mt-3 text-[12px] text-ink-2">Saved pages are automatically live when your workspace is approved. No separate publishing step is needed.</p>
-      </Section>
-      <Section title="Business hours" desc="Show live open or closed status using your local schedule."
-        aside={<Switch checked={c.businessHoursEnabled} onChange={(value) => set("businessHoursEnabled", value)} label="Use business hours" testId="switch-business-hours" />}>
-        {c.businessHoursEnabled && <>
-          <div>
-            <Label>Time zone</Label>
-            <TextInput value={c.businessHoursTimezone} onChange={(event) => set("businessHoursTimezone", event.target.value)}
-              placeholder="Asia/Amman" autoComplete="off" data-testid="input-business-hours-timezone" />
-            <p className="mt-1.5 text-[11.5px] text-muted">Enter an IANA time zone. Times below use this zone; the default is Asia/Amman.</p>
-          </div>
-          <div className="space-y-2.5">
-            {BUSINESS_DAYS.map(({ id, label }) => {
-              const hours = c.businessHours[id];
-              return (
-                <div key={id} className="grid gap-3 rounded-2xl border border-line bg-white/65 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-center">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-semibold">{label}</span>
-                    <Switch checked={!hours.closed} onChange={(open) => updateBusinessDay(id, { closed: !open })}
-                      label={`${label} open`} testId={`switch-business-hours-${id}`} />
-                  </div>
-                  {!hours.closed && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><Label>Opens</Label><TextInput type="time" value={hours.open} onChange={(event) => updateBusinessDay(id, { open: event.target.value })} data-testid={`input-business-open-${id}`} /></div>
-                      <div><Label>Closes</Label><TextInput type="time" value={hours.close} onChange={(event) => updateBusinessDay(id, { close: event.target.value })} data-testid={`input-business-close-${id}`} /></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>}
-      </Section>
-    </div>
-  );
-}
-
-function LinksTab({ c, set }: { c: PageConfig; set: Set }) {
-  const update = (id: string, patch: Partial<SmartLink>) => set("links", c.links.map((l) => (l.id === id ? { ...l, ...patch } : l)));
-  const move = (i: number, d: number) => { const a = [...c.links]; [a[i], a[i + d]] = [a[i + d], a[i]]; set("links", a); };
-  const active = c.links.filter((l) => l.active).length;
-  return (
-    <div className="space-y-4">
-      <Section title="Smart links" desc="Paste any URL. The icon is detected automatically." aside={<div className="flex items-center gap-2"><span className="text-[11px] text-muted">{active} visible</span><Counter n={c.links.length} max={MAX_LINKS} /></div>}>
-        {c.links.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-ink/15 p-6 text-center">
-            <div className="mx-auto flex w-fit gap-2 text-ink-2">
-              {["https://wa.me/1", "https://instagram.com", "https://tiktok.com", "https://maps.google.com"].map((u) => <span key={u} className="flex h-9 w-9 items-center justify-center rounded-full bg-white"><PlatformIcon url={u} /></span>)}
-            </div>
-            <p className="mt-3 text-sm font-semibold">No links yet</p>
-            <p className="text-[12px] text-muted">WhatsApp, Instagram, TikTok, Maps, email, phone, any website.</p>
-          </div>
-        )}
-        {c.links.map((l, i) => {
-          const isWa = (detectPlatform(l.url) || "").toLowerCase().includes("whatsapp");
-          return (
-            <div key={l.id} className={cn("rounded-2xl border bg-white/75 p-3 transition", l.active ? "border-line" : "border-dashed border-ink/20 opacity-70")} data-testid={`link-row-${i}`}>
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink text-paper"><PlatformIcon url={l.url} /></span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-ink-2">{l.url ? platformName(l.url) : "New link"}</span>
-                <div className="ml-auto flex items-center">
-                  <IconBtn label="Move up" disabled={i === 0} onClick={() => move(i, -1)} data-testid={`button-link-up-${i}`}><ArrowUp className="h-4 w-4" /></IconBtn>
-                  <IconBtn label="Move down" disabled={i === c.links.length - 1} onClick={() => move(i, 1)} data-testid={`button-link-down-${i}`}><ArrowDown className="h-4 w-4" /></IconBtn>
-                  <IconBtn label={l.active ? "Hide link" : "Show link"} onClick={() => update(l.id, { active: !l.active })} data-testid={`button-link-toggle-${i}`}>{l.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</IconBtn>
-                  <IconBtn label="Delete link" className="hover:text-stop" onClick={() => set("links", c.links.filter((x) => x.id !== l.id))} data-testid={`button-link-delete-${i}`}><Trash2 className="h-4 w-4" /></IconBtn>
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.4fr]">
-                <TextInput value={l.label} onChange={(e) => update(l.id, { label: e.target.value })} placeholder="Button label" className="h-10 text-[13px]" data-testid={`input-link-label-${i}`} />
-                <TextInput value={l.url} onChange={(e) => update(l.id, { url: e.target.value })} placeholder="https://wa.me/9627... or instagram.com/you" className="h-10 font-mono text-[12px]" data-testid={`input-link-url-${i}`} />
-              </div>
-              {isWa && (
-                <div className="mt-2">
-                  <TextInput value={l.message} onChange={(e) => update(l.id, { message: e.target.value })} placeholder="Pre-filled message: Hi! I saw your page on Opsaky and want to order..." className="h-10 text-[13px]" data-testid={`input-link-message-${i}`} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        <Btn type="button" variant="outline" className="w-full" disabled={c.links.length >= MAX_LINKS} data-testid="button-add-link"
-          onClick={() => set("links", [...c.links, { id: uid(), label: "", url: "", active: true, message: "" }])}>
-          <Plus className="h-4 w-4" />{c.links.length >= MAX_LINKS ? "7 / 7 links used" : "Add link"}
-        </Btn>
-      </Section>
-    </div>
-  );
-}
-
-function ShowcaseTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set }) {
-  return (
-    <div className="space-y-5">
-      <ContentTab draft={draft} setTitle={setTitle} c={c} set={set} section="showcase" />
-      <LayoutTab c={c} set={set} />
-    </div>
-  );
-}
 
 /* ---------------- Share kit ---------------- */
 function ShareKit({ open, onClose, page, dirty }: { open: boolean; onClose: () => void; page: StorePage; dirty: boolean }) {
@@ -512,13 +375,11 @@ export function Editor({ id }: { id: string }) {
   const source = useMemo(() => ws.pages.find((p) => p.id === id) ?? null, [ws.pages, id]);
   const [draft, setDraft] = useState<StorePage | null>(null);
   const [saved, setSaved] = useState<string>("");
-  const [tab, setTab] = useState<Tab>("content");
+  const [tab, setTab] = useState<Tab>("brand");
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [share, setShare] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<Tab | null>("content");
   const [slugEdit, setSlugEdit] = useState(false);
   const [slugDraft, setSlugDraft] = useState("");
   const initFor = useRef<string | null>(null);
@@ -572,7 +433,6 @@ export function Editor({ id }: { id: string }) {
   if (!draft) return null;
 
   const c = draft.config;
-  // Sharing must refer to the persisted slug, not an unsaved handle edit.
   const savedPage = source ?? draft;
   const liveUrl = pageUrl(savedPage.slug, isDemo);
   const set: Set = (k, v) => setDraft((d) => (d ? { ...d, config: { ...d.config, [k]: v } } : d));
@@ -595,157 +455,76 @@ export function Editor({ id }: { id: string }) {
   saveRef.current = () => void save();
 
   return (
-    <AppShell wide hideMobileHeader mobileFooter>
-      {/* Top bar */}
-      <div className="relative z-30 -mx-4 border-b border-white/70 bg-paper/85 px-4 py-3 shadow-[0_8px_24px_-22px_rgba(23,32,30,.5)] backdrop-blur-2xl md:-mx-6 md:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="hidden min-w-0 items-center gap-3 md:flex">
-            <button onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) router.push(base); }}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-white/70 transition hover:border-ink/40" aria-label="Back" data-testid="button-back">
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <div className="min-w-0">
-            <div className="font-display truncate text-lg font-bold leading-tight" data-testid="text-editor-title">{draft.title || "Untitled"}</div>
-            {slugEdit ? (
-              <div className="flex items-center gap-1">
-                <span className="font-mono text-[11.5px] text-muted">/</span>
-                <input autoFocus value={slugDraft} onChange={(e) => setSlugDraft(slugify(e.target.value))} className="w-40 rounded-md border border-line bg-white px-1.5 font-mono text-[11.5px] outline-none focus:border-ink" data-testid="input-edit-slug" />
-                <button className="text-go disabled:opacity-30" disabled={slugState !== "available" || otherSlugs.has(slugDraft)} onClick={() => { setDraft({ ...draft, slug: slugDraft }); setSlugEdit(false); }} aria-label="Apply handle" data-testid="button-apply-slug"><Check className="h-4 w-4" /></button>
-                <button className="text-muted" onClick={() => setSlugEdit(false)} aria-label="Cancel"><X className="h-4 w-4" /></button>
-              </div>
-            ) : (
-              <button onClick={() => { setSlugDraft(draft.slug); setSlugEdit(true); }} className="font-mono text-[11.5px] text-muted hover:text-ink" data-testid="button-edit-slug">/{draft.slug} · change</button>
-            )}
+    <div className="relative min-h-[100dvh] bg-paper lg:bg-transparent lg:pb-0">
+      
+      {/* 4-Tab Navigation (Mobile Full-width & Desktop) */}
+      <div className="sticky top-0 z-40 bg-paper/95 border-b border-line shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-2 py-3 sm:px-6">
+          <button onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) router.push(base); }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-ink/5" aria-label="Back">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          
+          <div className="no-scrollbar flex flex-1 overflow-x-auto px-2">
+            <div className="flex w-full min-w-max justify-around gap-1 sm:justify-start">
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => setTab(t.id)} data-testid={`tab-${t.id}`}
+                  className={cn("flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-colors sm:flex-row sm:gap-2",
+                    tab === t.id ? "bg-ink text-paper" : "text-ink-2 hover:bg-ink/5 hover:text-ink")}>
+                  <t.icon className="h-4 w-4" />
+                  <span className="text-[11px] font-semibold sm:text-[13px]">{t.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex min-w-0 items-center gap-2 md:hidden">
-            <LogoMark className="h-8 w-8 shrink-0" />
-            <div className="min-w-0">
-              <div className="font-display max-w-[36vw] truncate text-[15px] font-bold leading-tight" data-testid="text-editor-title-mobile">{draft.title || "Untitled"}</div>
-              <div className="truncate font-mono text-[10.5px] text-muted">/{slugEdit ? slugDraft : draft.slug}</div>
-            </div>
-          </div>
-          <div className="ml-auto hidden items-center gap-2 md:flex">
-            <span className={cn("hidden items-center gap-1.5 text-[12px] font-medium sm:flex", dirty ? "text-coral-deep" : "text-go")} data-testid="text-save-state">
-              <span className={cn("h-1.5 w-1.5 rounded-full", dirty ? "bg-coral" : "bg-go")} />{saving ? "Saving..." : dirty ? "Unsaved changes" : isDemo ? "Saved locally" : "All changes saved"}
-            </span>
-            <Btn variant="soft" size="md" onClick={() => setShare(true)} data-testid="button-share"><QrCode className="h-4 w-4" /><span className="hidden sm:inline">Share</span></Btn>
-            <Btn variant="coral" onClick={save} loading={saving} disabled={!dirty} data-testid="button-save"><Save className="h-4 w-4" />Save</Btn>
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
-            <Btn variant={dirty ? "coral" : "soft"} size="sm" onClick={() => dirty ? void save() : setShare(true)} loading={saving} data-testid="button-mobile-primary">
-              {dirty ? <><Save className="h-4 w-4" />Save</> : <><QrCode className="h-4 w-4" />Share</>}
-            </Btn>
-            <button type="button" aria-label="More page actions" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/80 text-ink" data-testid="button-editor-more">
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-          </div>
+          
+           <div className="hidden shrink-0 items-center gap-2 lg:flex pl-2">
+             <Btn variant="soft" size="md" onClick={() => setShare(true)} data-testid="button-share"><QrCode className="h-4 w-4" />Share</Btn>
+             <Btn variant="coral" onClick={save} loading={saving} disabled={!dirty} data-testid="button-save"><Save className="h-4 w-4" />Save</Btn>
+           </div>
         </div>
-        <div className="mt-3 hidden items-center gap-2 rounded-xl border border-line bg-white/80 px-3 py-2 md:flex">
-          <span className="shrink-0 text-[11px] font-semibold text-ink-2">{isDemo ? "Local preview" : "Live page"}</span>
-          <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 break-all font-mono text-[12px] text-teal underline underline-offset-2" data-testid="link-editor-live-url">{liveUrl}</a>
-          <Btn size="sm" className="shrink-0" onClick={() => copyText(liveUrl)} data-testid="button-copy-live-url"><Copy className="h-3.5 w-3.5" />Copy</Btn>
-        </div>
-        {slugEdit && <div className="mt-2 flex items-center gap-2 md:hidden">
-          <input autoFocus value={slugDraft} onChange={(e) => setSlugDraft(slugify(e.target.value))} className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 font-mono text-sm outline-none focus:border-ink" data-testid="input-edit-slug-mobile" />
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-go/10 text-go disabled:opacity-30" disabled={slugState !== "available" || otherSlugs.has(slugDraft)} onClick={() => { setDraft({ ...draft, slug: slugDraft }); setSlugEdit(false); }} aria-label="Apply handle" data-testid="button-apply-slug-mobile"><Check className="h-4 w-4" /></button>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-muted" onClick={() => setSlugEdit(false)} aria-label="Cancel handle change"><X className="h-4 w-4" /></button>
-        </div>}
-        {slugEdit && <div className="mt-1 hidden pl-12 md:block"><HandleHint state={otherSlugs.has(slugDraft) ? "taken" : slugState} /></div>}
-        {saveErr && <div className="mt-2 flex items-center gap-2 rounded-xl bg-stop/10 px-3 py-2 text-[13px] text-stop" data-testid="text-save-error"><AlertTriangle className="h-4 w-4 shrink-0" />{saveErr}<button className="ml-auto font-semibold underline" onClick={save}>Retry</button></div>}
       </div>
 
-      <div className="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
-        <div className={cn("min-w-0", mobileView === "preview" && "hidden lg:block")}>
-          <div className="no-scrollbar -mx-1 mb-5 hidden gap-1 overflow-x-auto px-1 md:flex">
-            {TABS.map((t) => (
-              <button key={t.id} onClick={() => setTab(t.id)} data-testid={`tab-${t.id}`}
-                className={cn("flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-semibold transition-all",
-                  tab === t.id ? "bg-ink text-paper shadow-lg" : "bg-white/50 text-ink-2 hover:bg-white")}>
-                <t.icon className={cn("h-4 w-4", tab === t.id && "text-lime")} />{t.label}
-                {t.id === "links" && <span className="font-mono text-[10.5px] opacity-70">{c.links.length}/7</span>}
-                {t.id === "content" && <span className="font-mono text-[10.5px] opacity-70">{c.gallery.length}/{MAX_GALLERY}</span>}
-              </button>
-            ))}
-          </div>
-          <div key={tab} className="rise hidden md:block" style={{ animationDuration: ".35s" }}>
-            {tab === "content" && <ContentTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
-            {tab === "design" && <DesignTab c={c} set={set} apply={apply} />}
-            {tab === "layout" && <LayoutTab c={c} set={set} />}
-            {tab === "links" && <LinksTab c={c} set={set} />}
-          </div>
-          <div className="space-y-3 md:hidden" data-testid="studio-accordion">
-            {MOBILE_SECTIONS.map((section) => {
-              const expanded = openSection === section.id;
-              const headingId = `mobile-section-${section.id}`;
-              return (
-                <section key={section.id} className={cn("overflow-hidden rounded-[24px] border transition-colors", expanded ? "border-ink/15 bg-white/65 shadow-[0_14px_36px_-28px_rgba(23,32,30,.45)]" : "border-white/80 bg-white/45")}>
-                  <button type="button" id={headingId} aria-expanded={expanded} aria-controls={`${headingId}-panel`}
-                    onClick={() => setOpenSection(expanded ? null : section.id)}
-                    className="flex min-h-[76px] w-full items-center gap-3 px-5 py-4 text-left" data-testid={`accordion-toggle-${section.id}`}>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[15px] font-bold">{section.title}</span>
-                      <span className="mt-1 block text-[11.5px] text-muted">{section.summary}</span>
-                    </span>
-                    <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", expanded && "rotate-180")} />
-                  </button>
-                  {expanded && (
-                    <div id={`${headingId}-panel`} role="region" aria-labelledby={headingId} className="space-y-5 border-t border-ink/5 px-4 py-5">
-                      {section.id === "content" && <ContentTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} section="brand" />}
-                      {section.id === "design" && <DesignTab c={c} set={set} apply={apply} />}
-                      {section.id === "links" && <LinksTab c={c} set={set} />}
-                      {section.id === "layout" && <ShowcaseTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        </div>
-        <aside className={cn(mobileView === "edit" && "hidden lg:block")}>
-          <div className="lg:sticky lg:top-[150px]">
-            <div className="mb-3 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-coral pulse-dot" />Live preview
+      <div className="mx-auto max-w-[1500px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_440px]">
+          
+          {/* Editor Area (Full width on mobile if editing) */}
+          <div className={cn("px-4 py-6 sm:px-6", mobileView === "preview" && "hidden lg:block pb-32 lg:pb-6")}>
+            <div className="rise" style={{ animationDuration: ".35s" }}>
+              {tab === "brand" && <BrandTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
+              {tab === "items" && <ItemsTab c={c} set={set} />}
+              {tab === "links" && <LinksAndHoursTab c={c} set={set} />}
+              {tab === "design" && <DesignTab c={c} set={set} apply={apply} />}
             </div>
-            <PhoneFrame><Storefront title={draft.title} config={c} framed hideFooter /></PhoneFrame>
           </div>
-        </aside>
-      </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-paper/80 px-4 pt-3 shadow-[0_-12px_32px_-24px_rgba(23,32,30,.55)] backdrop-blur-2xl md:hidden"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}>
-        <div className="mx-auto flex max-w-[520px] rounded-full border border-white/80 bg-white/60 p-1.5">
-          {(["edit", "preview"] as const).map((view) => (
-            <button key={view} type="button" onClick={() => setMobileView(view)} aria-pressed={mobileView === view} data-testid={`button-mobile-${view}`}
-              className={cn("flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold transition", mobileView === view ? "bg-ink text-paper shadow-sm" : "text-ink-2 hover:bg-white/70")}>
-              {view === "edit" ? <SlidersHorizontal className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}{view === "edit" ? "Edit" : "Preview"}
-            </button>
-          ))}
+
+          {/* Live Preview Area (Hidden on mobile if editing) */}
+          <aside className={cn("lg:border-l lg:border-line lg:bg-paper-2 lg:px-8", mobileView === "edit" && "hidden lg:block")}>
+            <div className="sticky top-[80px] pt-6 pb-24 lg:pb-6">
+              <PhoneFrame><Storefront title={draft.title} config={c} framed hideFooter /></PhoneFrame>
+            </div>
+          </aside>
         </div>
       </div>
-      {moreOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="More page actions" data-testid="drawer-editor-more">
-          <button type="button" className="absolute inset-0 bg-ink/30 backdrop-blur-sm" aria-label="Close actions" onClick={() => setMoreOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] border border-white/80 bg-paper/95 p-5 shadow-2xl backdrop-blur-2xl"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-lg font-bold">Page actions</h2>
-                <p className="mt-0.5 truncate font-mono text-[11px] text-muted">{liveUrl}</p>
-              </div>
-              <button type="button" aria-label="Close actions" onClick={() => setMoreOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5" data-testid="button-close-editor-more"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="space-y-2">
-              <button type="button" onClick={() => { setMoreOpen(false); void copyText(liveUrl); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-copy-url"><Copy className="h-4 w-4" />Copy page URL</button>
-              <button type="button" onClick={() => { setMoreOpen(false); setShare(true); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-qr-code"><QrCode className="h-4 w-4" />QR code and share</button>
-              <button type="button" onClick={() => { setMoreOpen(false); setMobileView("preview"); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-preview"><Eye className="h-4 w-4" />Preview page</button>
-              <button type="button" onClick={() => { setMoreOpen(false); setSlugDraft(draft.slug); setSlugEdit(true); }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-edit-url"><Link2 className="h-4 w-4" />Edit page URL</button>
-              <button type="button" onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) { setMoreOpen(false); router.push(base); } }} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white/75 px-4 text-sm font-semibold" data-testid="menu-back"><ArrowLeft className="h-4 w-4" />Back to workspace</button>
-            </div>
-          </div>
+
+      {/* Floating Bottom Bar (Mobile Only) */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-paper/95 p-4 shadow-[0_-10px_40px_-10px_rgba(23,32,30,.2)] backdrop-blur-xl lg:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}>
+        <div className="mx-auto flex max-w-[520px] items-center gap-3">
+           <button type="button" onClick={() => setMobileView(mobileView === "edit" ? "preview" : "edit")}
+            className="flex h-12 w-14 shrink-0 items-center justify-center rounded-2xl border border-line bg-white text-ink transition hover:bg-ink/5">
+            {mobileView === "edit" ? <Smartphone className="h-5 w-5" /> : <SlidersHorizontal className="h-5 w-5" />}
+          </button>
+          
+          <button onClick={save} disabled={!dirty || saving}
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-coral text-[15px] font-bold text-paper transition hover:bg-[#ff5544] disabled:opacity-50 disabled:grayscale">
+            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+            {saving ? "Saving..." : dirty ? "Save Changes" : "Saved"}
+          </button>
         </div>
-      )}
+      </div>
+      
       <ShareKit open={share} onClose={() => setShare(false)} page={savedPage} dirty={dirty} />
-    </AppShell>
+    </div>
   );
 }
