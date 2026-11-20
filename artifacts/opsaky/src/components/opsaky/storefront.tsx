@@ -20,6 +20,17 @@ export function rgba(hex: string, a: number) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
+function ProductCategory({ category, config }: { category?: string; config: PageConfig }) {
+  const label = category?.trim();
+  if (!label) return null;
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[10px] font-bold leading-tight"
+      style={{ background: config.accent, color: readableText(config.accent) }}>
+      {label}
+    </span>
+  );
+}
+
 export function PlatformIcon({ url, className }: { url: string; className?: string }) {
   const p = (detectPlatform(url) || "").toLowerCase();
   const c = cn("h-[18px] w-[18px]", className);
@@ -105,8 +116,11 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
           {c.gallery.map((g) => (
             <figure key={g.id} className="w-[72%] shrink-0 snap-center overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[4/5] w-full object-cover" />}
-              {(g.title || g.price) && <figcaption className="flex items-center justify-between gap-2 px-3 py-2.5 text-[13px]">
-                <span className="truncate font-semibold">{g.title}</span>
+              {(g.category || g.title || g.price) && <figcaption className="flex items-center justify-between gap-2 px-3 py-2.5 text-[13px]">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <ProductCategory category={g.category} config={c} />
+                  {g.title && <span className="block truncate font-semibold">{g.title}</span>}
+                </div>
                 {g.price && <span className="shrink-0 font-bold" style={{ color: c.accent }}>{g.price}</span>}
               </figcaption>}
             </figure>
@@ -118,7 +132,8 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
           {c.gallery.map((g) => (
             <figure key={g.id} className="relative overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-square w-full object-cover" />}
-              {(g.title || g.price) && <figcaption className="px-2.5 py-2 text-[12px]">
+              {(g.category || g.title || g.price) && <figcaption className="px-2.5 py-2 text-[12px]">
+                <ProductCategory category={g.category} config={c} />
                 <div className="truncate font-semibold">{g.title}</div>
                 {g.price && <div className="font-bold" style={{ color: c.accent }}>{g.price}</div>}
               </figcaption>}
@@ -132,6 +147,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
             <figure key={g.id} className="relative overflow-hidden" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[16/10] w-full object-cover" />}
               {g.price && <span className="absolute right-3 top-3 rounded-full px-3 py-1 text-[12px] font-bold shadow-lg" style={{ background: c.accent, color: readableText(c.accent) }}>{g.price}</span>}
+              {g.category && <span className="absolute left-3 top-3"><ProductCategory category={g.category} config={c} /></span>}
               {g.title && <figcaption className="px-4 py-3 text-[14px] font-semibold">{g.title}</figcaption>}
             </figure>
           ))}

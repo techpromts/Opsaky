@@ -4,9 +4,9 @@ export interface Account {
   phone: string; requestedSlug: string; status: AccountStatus; pageCount: number;
 }
 export interface SmartLink { id: string; label: string; url: string; active: boolean; message: string }
-export interface GalleryItem { id: string; image: string; title: string; price: string }
+export interface GalleryItem { id: string; image: string; title: string; price: string; category?: string }
 export interface PageConfig {
-  category: string; bio: string; logo: string; logoShape: "circle" | "rounded" | "cover";
+  category: string; customCategories?: string[]; bio: string; logo: string; logoShape: "circle" | "rounded" | "cover";
   announcement: string; showAnnouncement: boolean; announcementMode: "pinned" | "scroll";
   showStatus: boolean; isOpen: boolean; phone: string; email: string; showPhone: boolean; showEmail: boolean;
   theme: string; backgroundMode: "solid" | "gradient" | "image"; background: string; gradientColor: string;
@@ -31,7 +31,7 @@ export const THEMES = [
   { id: "studio", name: "Clean Studio White", background: "#fafafa", surface: "#ffffff", accent: "#242424", buttonColor: "#242424", textColor: "#242424" },
 ];
 export const defaultConfig = (): PageConfig => ({
-  category: "Other", bio: "A little more about what makes us, us.", logo: "", logoShape: "circle",
+  category: "Other", customCategories: [], bio: "A little more about what makes us, us.", logo: "", logoShape: "circle",
   announcement: "Something good is here. Discover our latest collection.", showAnnouncement: false, announcementMode: "pinned",
   showStatus: false, isOpen: true, phone: "", email: "", showPhone: false, showEmail: false,
   theme: "cream", backgroundMode: "solid", background: "#f4f0e8", gradientColor: "#e1e9db", gradientAngle: 135,

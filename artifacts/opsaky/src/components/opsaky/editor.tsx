@@ -18,6 +18,7 @@ import { PhoneFrame, PlatformIcon, Storefront, platformName } from "./storefront
 import { copyText, HandleHint, useHandleCheck } from "./dashboard";
 import { pageUrl } from "@/lib/urls";
 import { LogoMark } from "./logo";
+import { CategorySelector } from "./category-selector";
 
 const MAX_LINKS = 7;
 const MAX_GALLERY = 4;
@@ -112,6 +113,12 @@ type Set = <K extends keyof PageConfig>(k: K, v: PageConfig[K]) => void;
 
 function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: StorePage; setTitle: (t: string) => void; c: PageConfig; set: Set; section?: "all" | "brand" | "showcase" }) {
   const up = useUploader();
+  const categories = [...new Set([...CATEGORIES, ...(c.customCategories ?? [])])];
+  const addCustomCategory = (category: string) => {
+    if (!categories.some((existing) => existing.toLocaleLowerCase() === category.toLocaleLowerCase())) {
+      set("customCategories", [...(c.customCategories ?? []), category]);
+    }
+  };
   const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   return (
     <div className="space-y-5">
@@ -140,10 +147,8 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
         </div>
         <div>
           <Label>Category tag</Label>
-          <select value={c.category} onChange={(e) => set("category", e.target.value)} data-testid="select-category"
-            className="h-11 w-full rounded-xl border border-line bg-white/80 px-3 text-sm outline-none focus:border-ink">
-            {CATEGORIES.map((x) => <option key={x}>{x}</option>)}
-          </select>
+          <CategorySelector value={c.category} categories={categories} onChange={(value) => set("category", value)}
+            onCreate={addCustomCategory} testId="select-category" />
         </div>
         <div>
           <Label hint={`${c.bio.length}/160`}>Bio / tagline</Label>
@@ -192,13 +197,18 @@ function ContentTab({ draft, setTitle, c, set, section = "all" }: { draft: Store
                 <TextInput value={g.title} onChange={(e) => updateItem(g.id, { title: e.target.value })} placeholder="Item title" className="h-9 text-[13px]" />
                 <TextInput value={g.price} onChange={(e) => updateItem(g.id, { price: e.target.value })} placeholder="Price" className="h-9 w-24 text-[13px]" />
               </div>
+              <div className="mt-2">
+                <Label>Product category</Label>
+                <CategorySelector value={g.category ?? ""} categories={categories} onChange={(category) => updateItem(g.id, { category })}
+                  onCreate={addCustomCategory} allowEmpty testId={`select-gallery-category-${i}`} />
+              </div>
               <div className="mt-2"><UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, PAGE_IMAGE_SIZE, (d) => updateItem(g.id, { image: d }))} /></div>
             </div>
           ))}
           {c.gallery.length < MAX_GALLERY && (
             <label className={cn("flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/15 text-ink-2 transition hover:border-coral hover:text-coral", up.busyKey === "new" && "pointer-events-none opacity-60")}>
               <input type="file" accept=".jpg,.jpeg,.png,.webp,.avif" className="hidden" data-testid="input-gallery-new"
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) up.run("new", f, PAGE_IMAGE_SIZE, (d) => set("gallery", [...c.gallery, { id: uid(), image: d, title: "", price: "" }])); }} />
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) up.run("new", f, PAGE_IMAGE_SIZE, (d) => set("gallery", [...c.gallery, { id: uid(), image: d, title: "", price: "", category: "" }])); }} />
               {up.busyKey === "new" ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
               <span className="mt-2 text-[13px] font-semibold">Add photo</span>
               <span className="font-mono text-[11px] text-muted">{MAX_GALLERY - c.gallery.length} slots left</span>
@@ -545,7 +555,7 @@ export function Editor({ id }: { id: string }) {
   return (
     <AppShell wide hideMobileHeader mobileFooter>
       {/* Top bar */}
-      <div className="sticky top-0 z-30 -mx-4 border-b border-white/70 bg-paper/85 px-4 py-3 shadow-[0_8px_24px_-22px_rgba(23,32,30,.5)] backdrop-blur-2xl md:top-16 md:-mx-6 md:px-6">
+      <div className="relative z-30 -mx-4 border-b border-white/70 bg-paper/85 px-4 py-3 shadow-[0_8px_24px_-22px_rgba(23,32,30,.5)] backdrop-blur-2xl md:-mx-6 md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="hidden min-w-0 items-center gap-3 md:flex">
             <button onClick={() => { if (!dirty || confirm("Leave without saving your changes?")) router.push(base); }}

@@ -388,6 +388,7 @@ function Workspace() {
     ws.pages.forEach((p) => { m[p.config.category] = (m[p.config.category] ?? 0) + 1; });
     return m;
   }, [ws.pages]);
+  const categoryFilters = useMemo(() => ["All", ...new Set([...CATEGORIES, ...ws.pages.map((p) => p.config.category).filter(Boolean)])], [ws.pages]);
   const filtered = useMemo(() => ws.pages.filter((p) =>
     (cat === "All" || p.config.category === cat) &&
     (!q.trim() || `${p.title} ${p.slug} ${p.config.bio}`.toLowerCase().includes(q.trim().toLowerCase()))), [ws.pages, cat, q]);
@@ -433,7 +434,7 @@ function Workspace() {
             <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages" className="rounded-full pl-10" data-testid="input-search" />
           </div>
           <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
-            {["All", ...CATEGORIES].map((c) => (
+            {categoryFilters.map((c) => (
               <button key={c} onClick={() => setCat(c)} data-testid={`filter-${slugify(c)}`}
                 className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[12.5px] font-semibold transition",
                   cat === c ? "border-ink bg-ink text-paper" : "border-line bg-white/50 text-ink-2 hover:border-ink/30")}>
