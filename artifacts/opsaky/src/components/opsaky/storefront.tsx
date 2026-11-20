@@ -118,7 +118,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   }, [c.businessHoursEnabled]);
 
   const hoursStatus = c.businessHoursEnabled && clock !== null
-    ? getBusinessStatus(c.businessHours, c.businessHoursTimezone, new Date(clock))
+    ? getBusinessStatus(c.businessHours, c.businessHoursTimezone, new Date(clock), Boolean(c.is24_7))
     : undefined;
 
   const btnText = c.buttonShape === "outline" ? c.buttonColor : readableText(c.buttonColor);
@@ -463,9 +463,14 @@ export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { titl
 
 export function PhoneFrame({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("relative mx-auto w-[340px] rounded-[48px] bg-ink p-[11px] shadow-[0_40px_80px_-30px_rgba(23,32,30,.6)]", className)}>
-      <div className="absolute left-1/2 top-[18px] z-20 h-[24px] w-[92px] -translate-x-1/2 rounded-full bg-ink" />
-      <div className="thin-scroll relative h-[680px] overflow-y-auto overflow-x-hidden rounded-[38px] bg-paper">
+    <div
+      className={cn(
+        "relative mx-auto flex h-[min(700px,calc(100dvh-150px))] w-full max-w-[360px] flex-col rounded-[44px] bg-ink p-[10px] shadow-[0_32px_70px_-25px_rgba(23,32,30,.55)]",
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute left-1/2 top-[16px] z-20 h-[20px] w-[84px] -translate-x-1/2 rounded-full bg-ink" />
+      <div className="thin-scroll relative flex-1 overflow-y-auto overflow-x-hidden rounded-[34px] bg-paper">
         {children}
       </div>
     </div>
