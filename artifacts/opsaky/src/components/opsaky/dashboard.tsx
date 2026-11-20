@@ -166,7 +166,7 @@ function ActivationRequest() {
           <Label>First page handle</Label>
           <div className="flex h-11 items-center rounded-xl border border-line bg-white/80 pl-3.5 focus-within:border-ink focus-within:ring-4 focus-within:ring-ink/5">
             <span className="max-w-[50%] shrink-0 truncate font-mono text-[12.5px] text-muted" title={displayUrl("", false)}>{displayUrl("", false)}</span>
-            <input value={effectiveSlug} onChange={(e) => { setTouched(true); setSlug(slugify(e.target.value)); }} placeholder="your-shop"
+            <input value={effectiveSlug} onChange={(e) => { setTouchedSlug(true); setSlug(slugify(e.target.value)); }} placeholder="your-shop"
               className="h-full w-full bg-transparent pr-3 font-mono text-[13px] text-ink outline-none" data-testid="input-slug" />
           </div>
           <HandleHint state={handle} />
