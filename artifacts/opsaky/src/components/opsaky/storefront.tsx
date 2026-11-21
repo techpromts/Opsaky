@@ -22,6 +22,61 @@ export function rgba(hex: string, a: number) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
+function toHex(r: number, g: number, b: number) {
+  return `#${[r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function isDarkColor(color: string) {
+  const m = color.match(/\d+/g);
+  if (color.startsWith("rgb") && m && m.length >= 3) {
+    const [r, g, b] = m.map(Number);
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+  const h = color.replace("#", "");
+  if (h.length >= 6) {
+    const n = parseInt(h.slice(0, 6), 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+  return false;
+}
+
+function extractEdgeColor(src: string, overlayPct: number, fallback: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    if (!src.startsWith("data:")) img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 16;
+        canvas.height = 16;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(fallback); return; }
+        ctx.drawImage(img, 0, 0, 16, 16);
+        const { data } = ctx.getImageData(0, 0, 16, 16);
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let y = 0; y < 16; y++) {
+          for (let x = 0; x < 16; x++) {
+            if (y < 3 || y > 12 || x < 2 || x > 13) {
+              const i = (y * 16 + x) * 4;
+              r += data[i];
+              g += data[i + 1];
+              b += data[i + 2];
+              count++;
+            }
+          }
+        }
+        const dim = 1 - Math.min(Math.max(overlayPct, 0), 100) / 100;
+        resolve(toHex((r / count) * dim, (g / count) * dim, (b / count) * dim));
+      } catch {
+        resolve(fallback);
+      }
+    };
+    img.onerror = () => resolve(fallback);
+    img.src = src;
+  });
+}
+
 function ProductCategory({ category, config }: { category?: string; config: PageConfig }) {
   const label = category?.trim();
   if (!label) return null;
@@ -137,15 +192,53 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
 
   useEffect(() => {
     if (framed || typeof document === "undefined") return;
+    let active = true;
     const prevBodyBg = document.body.style.backgroundColor;
     const prevHtmlBg = document.documentElement.style.backgroundColor;
-    document.body.style.backgroundColor = c.background;
-    document.documentElement.style.backgroundColor = c.background;
+    const prevColorScheme = document.documentElement.style.colorScheme;
+
+    const upsertMeta = (name: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      const created = !el;
+      if (!el) {
+        el = document.createElement("meta");
+        el.name = name;
+        document.head.appendChild(el);
+      }
+      return { el, created, prev: el.content };
+    };
+
+    const themeMeta = upsertMeta("theme-color");
+    const navMeta = upsertMeta("msapplication-navbutton-color");
+    const statusMeta = upsertMeta("apple-mobile-web-app-status-bar-style");
+
+    const applyChromeColor = (hexColor: string) => {
+      if (!active) return;
+      document.body.style.backgroundColor = hexColor;
+      document.documentElement.style.backgroundColor = hexColor;
+      document.documentElement.style.colorScheme = isDarkColor(hexColor) ? "dark" : "light";
+      themeMeta.el.content = hexColor;
+      navMeta.el.content = hexColor;
+      statusMeta.el.content = isDarkColor(hexColor) ? "black-translucent" : "default";
+    };
+
+    if (imageBackground && c.backgroundImage) {
+      void extractEdgeColor(c.backgroundImage, c.overlay, c.background).then(applyChromeColor);
+    } else {
+      applyChromeColor(c.background);
+    }
+
     return () => {
+      active = false;
       document.body.style.backgroundColor = prevBodyBg;
       document.documentElement.style.backgroundColor = prevHtmlBg;
+      document.documentElement.style.colorScheme = prevColorScheme;
+      for (const m of [themeMeta, navMeta, statusMeta]) {
+        if (m.created) m.el.remove();
+        else m.el.content = m.prev;
+      }
     };
-  }, [framed, c.background]);
+  }, [framed, imageBackground, c.backgroundImage, c.overlay, c.background]);
 
   const glassStyle: CSSProperties = {
     background: rgba(c.surface, imageBackground ? 0.56 : 0.72),
@@ -226,7 +319,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const gallery = c.gallery.length > 0 && (
     <section data-testid="sf-gallery">
       {c.galleryMode === "carousel" && (
-        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
+        <div className="no-scrollbar -mx-5 flex touch-pan-x snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
           {c.gallery.map((g) => (
             <figure key={g.id} className="w-[74%] shrink-0 snap-center overflow-hidden transition-transform duration-300" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[4/5] w-full object-cover" />}
@@ -356,7 +449,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         style={{ ...bg, color: c.textColor, fontFamily: font }}
       >
         {imageBackground && framed && (
-          <div className="pointer-events-none absolute -inset-12 z-0 overflow-hidden">
+          <div className="pointer-events-none sticky top-0 z-0 -mb-[100%] h-[812px] w-full overflow-hidden">
             <img
               src={c.backgroundImage}
               alt=""
@@ -528,7 +621,7 @@ export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { titl
   );
 }
 
-export function PhoneFrame({ children, className }: { children: ReactNode; className?: string }) {
+export function PhoneFrame({ children, className, backgroundColor = "#141716" }: { children: ReactNode; className?: string; backgroundColor?: string }) {
   return (
     <div
       className={cn(
@@ -537,7 +630,10 @@ export function PhoneFrame({ children, className }: { children: ReactNode; class
       )}
     >
       <div className="pointer-events-none absolute left-1/2 top-[22px] z-30 h-[26px] w-[104px] -translate-x-1/2 rounded-full bg-black shadow-inner" />
-      <div className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full overflow-y-auto overflow-x-hidden rounded-[40px] bg-paper">
+      <div
+        className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full touch-pan-y overscroll-contain overflow-y-auto overflow-x-hidden rounded-[40px]"
+        style={{ backgroundColor, WebkitOverflowScrolling: "touch" }}
+      >
         {children}
       </div>
     </div>
