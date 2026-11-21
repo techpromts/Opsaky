@@ -329,13 +329,13 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         <div
           className={cn(
             "pointer-events-none -z-10 overflow-hidden",
-            framed ? "absolute inset-0 h-full w-full" : "fixed -top-[25vh] -bottom-[35vh] -inset-x-[15vw] h-[160lvh] w-[130vw]"
+            framed ? "absolute inset-0 h-full w-full" : "fixed -top-[45vh] -bottom-[45vh] -inset-x-[25vw] h-[190lvh] w-[150vw]"
           )}
         >
           <img
             src={c.backgroundImage}
             alt=""
-            className="h-full w-full object-cover object-center"
+            className="h-full w-full scale-110 object-cover object-center"
             style={{ filter: `blur(${c.blur}px)` }}
           />
           <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
