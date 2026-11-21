@@ -133,14 +133,13 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     if (framed || typeof document === "undefined") return;
     const prevBodyBg = document.body.style.backgroundColor;
     const prevHtmlBg = document.documentElement.style.backgroundColor;
-    const targetBg = imageBackground ? "#090a09" : c.background;
-    document.body.style.backgroundColor = targetBg;
-    document.documentElement.style.backgroundColor = targetBg;
+    document.body.style.backgroundColor = c.background;
+    document.documentElement.style.backgroundColor = c.background;
     return () => {
       document.body.style.backgroundColor = prevBodyBg;
       document.documentElement.style.backgroundColor = prevHtmlBg;
     };
-  }, [framed, imageBackground, c.background]);
+  }, [framed, c.background]);
 
   const glassStyle: CSSProperties = {
     background: rgba(c.surface, imageBackground ? 0.56 : 0.72),
@@ -330,13 +329,13 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         <div
           className={cn(
             "pointer-events-none -z-10 overflow-hidden",
-            framed ? "absolute inset-0 h-full w-full" : "fixed -inset-[20%] h-[140lvh] w-[140vw]"
+            framed ? "absolute inset-0 h-full w-full" : "fixed -top-[25vh] -bottom-[35vh] -inset-x-[15vw] h-[160lvh] w-[130vw]"
           )}
         >
           <img
             src={c.backgroundImage}
             alt=""
-            className="h-full w-full scale-110 object-cover object-center"
+            className="h-full w-full object-cover object-center"
             style={{ filter: `blur(${c.blur}px)` }}
           />
           <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
