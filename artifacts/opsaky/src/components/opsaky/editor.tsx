@@ -7,10 +7,11 @@ import {
   AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, Check, Circle, Clock, Copy, Download, Eye, EyeOff, Image as ImageIcon, LayoutPanelTop,
   Link2, Loader2, Palette, Plus, QrCode, RectangleHorizontal, Save, Smartphone, Square, SlidersHorizontal, Trash2, Type, Upload, X,
 } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { useWorkspace } from "@/lib/workspace";
 import { BUSINESS_DAYS, CATEGORIES, MAX_GALLERY_ITEMS, THEMES, validSlug, type GalleryItem, type PageConfig, type SmartLink, type StorePage } from "@/lib/model";
 import { compressImage, isSupportedImageType, MAX_IMAGE_DATA_URL_LENGTH, type ImageCompressionOptions } from "@/lib/images";
-import { detectPlatform } from "@/lib/links";
+import { detectPlatform, getWhatsAppDigits } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import { AppShell, CenterCard, useMode, useTitle } from "./shell";
 import { Btn, ColorField, IconBtn, Label, Modal, Range, Segmented, Skeleton, Switch, TextArea, TextInput } from "./ui";
@@ -23,6 +24,15 @@ const MAX_LINKS = 7;
 const MAX_GALLERY = MAX_GALLERY_ITEMS;
 const LOGO_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 400, maxHeight: 400 };
 const PAGE_IMAGE_SIZE: ImageCompressionOptions = { maxWidth: 1000 };
+
+export type OptionalWhatsAppGalleryItem = GalleryItem & {
+  whatsappOrder?: boolean;
+};
+
+function hasWhatsAppNumber(links: SmartLink[], phone?: string) {
+  if (getWhatsAppDigits(links)) return true;
+  return (phone || "").replace(/\D/g, "").length >= 8;
+}
 
 async function compressExistingImage(dataUrl: string, options: ImageCompressionOptions): Promise<string> {
   if (!dataUrl.startsWith("data:image/") || dataUrl.length <= MAX_IMAGE_DATA_URL_LENGTH) return dataUrl;
@@ -241,15 +251,17 @@ function BrandTab({ draft, setTitle, c, set }: { draft: StorePage; setTitle: (t:
   );
 }
 
-function ItemsTab({ c, set }: { c: PageConfig; set: Set }) {
+function ItemsTab({ c, set, onGoToWhatsApp }: { c: PageConfig; set: Set; onGoToWhatsApp: () => void }) {
   const up = useUploader();
   const categories = [...new Set([...CATEGORIES, ...(c.customCategories ?? [])])];
+  const waConfigured = hasWhatsAppNumber(c.links, c.phone);
   const addCustomCategory = (category: string) => {
     if (!categories.some((existing) => existing.toLocaleLowerCase() === category.toLocaleLowerCase())) {
       set("customCategories", [...(c.customCategories ?? []), category]);
     }
   };
-  const updateItem = (id: string, patch: Partial<GalleryItem>) => set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
+  const updateItem = (id: string, patch: Partial<OptionalWhatsAppGalleryItem>) =>
+    set("gallery", c.gallery.map((g) => (g.id === id ? { ...g, ...patch } : g)));
 
   const layoutOptions: { mode: PageConfig["galleryMode"]; title: string; subtitle: string }[] = [
     { mode: "featured", title: "Stacked Cards", subtitle: "One wide card per row" },
@@ -259,7 +271,7 @@ function ItemsTab({ c, set }: { c: PageConfig; set: Set }) {
 
   return (
     <div className="space-y-4">
-      <Section title="Products / Showcase" desc="Add up to 12 items and pick how visitors browse them." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
+      <Section title="Products / Showcase" desc="Add up to 12 items and choose which ones have a WhatsApp order button." aside={<Counter n={c.gallery.length} max={MAX_GALLERY} />}>
         <div>
           <Label>How items appear on your page</Label>
           <div className="grid grid-cols-3 gap-2">
@@ -294,30 +306,76 @@ function ItemsTab({ c, set }: { c: PageConfig; set: Set }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {c.gallery.map((g, i) => (
-            <div key={g.id} className="rounded-2xl border border-line bg-white/75 p-3" data-testid={`gallery-item-${i}`}>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-paper-2">
-                {g.image ? <img src={g.image} alt={g.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-muted"><ImageIcon className="h-6 w-6" /></div>}
-                <div className="absolute right-1.5 top-1.5 flex gap-1">
-                  <IconBtn label="Move left" disabled={i === 0} className="bg-white/90" onClick={() => { const a = [...c.gallery]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; set("gallery", a); }}><ArrowUp className="h-3.5 w-3.5 -rotate-90" /></IconBtn>
-                  <IconBtn label="Move right" disabled={i === c.gallery.length - 1} className="bg-white/90" onClick={() => { const a = [...c.gallery]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; set("gallery", a); }}><ArrowDown className="h-3.5 w-3.5 -rotate-90" /></IconBtn>
-                  <IconBtn label="Remove item" className="bg-white/90 hover:text-stop" onClick={() => set("gallery", c.gallery.filter((x) => x.id !== g.id))} data-testid={`button-remove-gallery-${i}`}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+          {(c.gallery as OptionalWhatsAppGalleryItem[]).map((g, i) => {
+            const waEnabled = Boolean(g.whatsappOrder);
+            return (
+              <div key={g.id} className="rounded-2xl border border-line bg-white/75 p-3" data-testid={`gallery-item-${i}`}>
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-paper-2">
+                  {g.image ? <img src={g.image} alt={g.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-muted"><ImageIcon className="h-6 w-6" /></div>}
+                  <div className="absolute right-1.5 top-1.5 flex gap-1">
+                    <IconBtn label="Move left" disabled={i === 0} className="bg-white/90" onClick={() => { const a = [...c.gallery]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; set("gallery", a); }}><ArrowUp className="h-3.5 w-3.5 -rotate-90" /></IconBtn>
+                    <IconBtn label="Move right" disabled={i === c.gallery.length - 1} className="bg-white/90" onClick={() => { const a = [...c.gallery]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; set("gallery", a); }}><ArrowDown className="h-3.5 w-3.5 -rotate-90" /></IconBtn>
+                    <IconBtn label="Remove item" className="bg-white/90 hover:text-stop" onClick={() => set("gallery", c.gallery.filter((x) => x.id !== g.id))} data-testid={`button-remove-gallery-${i}`}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex gap-2">
+                  <TextInput value={g.title} onChange={(e) => updateItem(g.id, { title: e.target.value })} placeholder="Item name" className="min-h-[40px] text-[13px]" />
+                  <TextInput value={g.price} onChange={(e) => updateItem(g.id, { price: e.target.value })} placeholder="Price" className="min-h-[40px] w-24 text-[13px]" />
+                </div>
+
+                <div className="mt-2">
+                  <CategorySelector value={g.category ?? ""} categories={categories} onChange={(category) => updateItem(g.id, { category })} onCreate={addCustomCategory} allowEmpty testId={`select-gallery-category-${i}`} />
+                </div>
+
+                <div
+                  className={cn(
+                    "mt-2.5 flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition",
+                    waEnabled ? "border-[#25D366]/40 bg-[#25D366]/10" : "border-line bg-paper-2/70"
+                  )}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <SiWhatsapp className={cn("h-4 w-4 shrink-0", waEnabled ? "text-[#16a34a]" : "text-muted")} />
+                    <span className="truncate text-[12px] font-bold text-ink">Order via WhatsApp</span>
+                  </div>
+                  <Switch
+                    checked={waEnabled}
+                    onChange={(v) => updateItem(g.id, { whatsappOrder: v })}
+                    label="Order via WhatsApp"
+                    testId={`switch-gallery-wa-${i}`}
+                  />
+                </div>
+
+                {waEnabled && !waConfigured && (
+                  <button
+                    type="button"
+                    onClick={onGoToWhatsApp}
+                    className="mt-1.5 flex w-full items-center justify-between rounded-xl bg-coral/10 px-2.5 py-1.5 text-left text-[11px] font-semibold text-coral-deep transition hover:bg-coral/15"
+                  >
+                    <span>Add your WhatsApp number first</span>
+                    <span className="underline">Set number</span>
+                  </button>
+                )}
+
+                <div className="mt-2.5">
+                  <UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, PAGE_IMAGE_SIZE, (d) => updateItem(g.id, { image: d }))} />
                 </div>
               </div>
-              <div className="mt-2.5 flex gap-2">
-                <TextInput value={g.title} onChange={(e) => updateItem(g.id, { title: e.target.value })} placeholder="Item name" className="min-h-[40px] text-[13px]" />
-                <TextInput value={g.price} onChange={(e) => updateItem(g.id, { price: e.target.value })} placeholder="Price" className="min-h-[40px] w-24 text-[13px]" />
-              </div>
-              <div className="mt-2">
-                <CategorySelector value={g.category ?? ""} categories={categories} onChange={(category) => updateItem(g.id, { category })} onCreate={addCustomCategory} allowEmpty testId={`select-gallery-category-${i}`} />
-              </div>
-              <div className="mt-2"><UploadButton label="Replace photo" testId={`input-gallery-${i}`} busy={up.busyKey === g.id} onFile={(f) => up.run(g.id, f, PAGE_IMAGE_SIZE, (d) => updateItem(g.id, { image: d }))} /></div>
-            </div>
-          ))}
+            );
+          })}
           {c.gallery.length < MAX_GALLERY && (
-            <label className={cn("flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/15 text-ink-2 transition hover:border-coral hover:text-coral", up.busyKey === "new" && "pointer-events-none opacity-60")}>
+            <label className={cn("flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/15 text-ink-2 transition hover:border-coral hover:text-coral", up.busyKey === "new" && "pointer-events-none opacity-60")}>
               <input type="file" accept=".jpg,.jpeg,.png,.webp,.avif" className="hidden" data-testid="input-gallery-new"
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) up.run("new", f, PAGE_IMAGE_SIZE, (d) => set("gallery", [...c.gallery, { id: uid(), image: d, title: "", price: "", category: "" }])); }} />
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) {
+                    up.run("new", f, PAGE_IMAGE_SIZE, (d) => {
+                      const nextItem: OptionalWhatsAppGalleryItem = { id: uid(), image: d, title: "", price: "", category: "", whatsappOrder: false };
+                      set("gallery", [...c.gallery, nextItem]);
+                    });
+                  }
+                }} />
               {up.busyKey === "new" ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
               <span className="mt-2 text-[13px] font-semibold">Add item photo</span>
               <span className="font-mono text-[11px] text-muted">{MAX_GALLERY - c.gallery.length} slots left</span>
@@ -340,9 +398,9 @@ function LinksAndHoursTab({ c, set }: { c: PageConfig; set: Set }) {
 
   return (
     <div className="space-y-4">
-      <Section title="WhatsApp Orders" desc="Phone number used for one-tap item orders.">
+      <Section title="WhatsApp Orders" desc="Phone number used when 'Order via WhatsApp' is enabled on an item.">
         <TextInput value={c.phone} onChange={(e) => set("phone", e.target.value)} placeholder="e.g. 962790000000" inputMode="tel" data-testid="input-contact-phone" />
-        <p className="text-[11.5px] text-muted">Include country code (e.g., 962). Enables the 'Order on WhatsApp' button on every product.</p>
+        <p className="text-[11.5px] text-muted">Include country code (e.g., 962). Only items where you turn on 'Order via WhatsApp' will show the button.</p>
       </Section>
 
       <Section title="Social & Action Links" desc="Add Instagram, Maps, Menu, or any URL." aside={<div className="flex items-center gap-2"><span className="text-[11px] text-muted">{active} visible</span><Counter n={c.links.length} max={MAX_LINKS} /></div>}>
@@ -709,7 +767,7 @@ export function Editor({ id }: { id: string }) {
           <div className={cn("px-4 py-6 pb-28 sm:px-6 lg:pb-10", mobileView === "preview" && "hidden lg:block")}>
             <div className="rise" style={{ animationDuration: ".3s" }}>
               {tab === "brand" && <BrandTab draft={draft} c={c} set={set} setTitle={(t) => setDraft({ ...draft, title: t })} />}
-              {tab === "items" && <ItemsTab c={c} set={set} />}
+              {tab === "items" && <ItemsTab c={c} set={set} onGoToWhatsApp={() => setTab("links")} />}
               {tab === "links" && <LinksAndHoursTab c={c} set={set} />}
               {tab === "design" && <DesignTab c={c} set={set} apply={apply} />}
             </div>
@@ -721,7 +779,7 @@ export function Editor({ id }: { id: string }) {
                 <span className="h-2 w-2 rounded-full bg-go animate-pulse" />
                 Live Mobile Preview
               </div>
-              <PhoneFrame>
+              <PhoneFrame backgroundColor={c.background}>
                 <Storefront title={draft.title} config={c} framed hideFooter />
               </PhoneFrame>
             </div>
