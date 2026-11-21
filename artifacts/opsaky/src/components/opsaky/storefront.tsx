@@ -195,15 +195,10 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const scrollRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [bgLoaded, setBgLoaded] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    setBgLoaded(false);
-  }, [c.backgroundImage]);
 
   useEffect(() => {
     if (!c.businessHoursEnabled) {
@@ -230,9 +225,11 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
   const darkSurface = isDarkColor(c.surface);
   const items = c.gallery as GalleryItemWithOrder[];
+  const bgUrl = c.backgroundImage ? `url("${c.backgroundImage.replace(/"/g, '\\"')}")` : "none";
 
   useEffect(() => {
     if (typeof document === "undefined" || !imageBackground || !c.backgroundImage) return;
+    if (c.backgroundImage.startsWith("data:")) return;
     const link = document.createElement("link");
     link.rel = "preload";
     link.as = "image";
@@ -606,22 +603,20 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
           left: "-25vw",
           right: "-25vw",
           backgroundColor: c.background,
+          backgroundImage: bgUrl,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       >
-        <img
-          src={c.backgroundImage}
-          alt=""
-          loading="eager"
-          decoding="sync"
-          fetchPriority="high"
-          onLoad={() => setBgLoaded(true)}
-          className={cn(
-            "h-full w-full scale-110 object-cover object-center transition-opacity duration-300",
-            bgLoaded ? "opacity-100" : "opacity-0"
-          )}
-          style={{ filter: `blur(${c.blur}px)` }}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: `rgba(0, 0, 0, ${c.overlay / 100})`,
+            backdropFilter: c.blur > 0 ? `blur(${c.blur}px)` : undefined,
+            WebkitBackdropFilter: c.blur > 0 ? `blur(${c.blur}px)` : undefined,
+          }}
         />
-        <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
       </div>,
       document.body
     );
@@ -636,23 +631,24 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       >
         {imageBackground && framed && (
           <div
+            aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-            style={{ backgroundColor: c.background }}
+            style={{
+              backgroundColor: c.background,
+              backgroundImage: bgUrl,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
-            <img
-              src={c.backgroundImage}
-              alt=""
-              loading="eager"
-              decoding="sync"
-              fetchPriority="high"
-              onLoad={() => setBgLoaded(true)}
-              className={cn(
-                "h-full w-full scale-110 object-cover object-center transition-opacity duration-200",
-                bgLoaded ? "opacity-100" : "opacity-0"
-              )}
-              style={{ filter: `blur(${c.blur}px)` }}
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundColor: `rgba(0, 0, 0, ${c.overlay / 100})`,
+                backdropFilter: c.blur > 0 ? `blur(${c.blur}px)` : undefined,
+                WebkitBackdropFilter: c.blur > 0 ? `blur(${c.blur}px)` : undefined,
+              }}
             />
-            <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
           </div>
         )}
 
