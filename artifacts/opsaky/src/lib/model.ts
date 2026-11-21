@@ -4,7 +4,14 @@ export interface Account {
   phone: string; requestedSlug: string; status: AccountStatus; pageCount: number;
 }
 export interface SmartLink { id: string; label: string; url: string; active: boolean; message: string }
-export interface GalleryItem { id: string; image: string; title: string; price: string; category?: string }
+export interface GalleryItem {
+  id: string;
+  image: string;
+  title: string;
+  price: string;
+  category?: string;
+  whatsappOrder?: boolean;
+}
 export const BUSINESS_DAYS = [
   { id: "sun", label: "Sunday" },
   { id: "mon", label: "Monday" },
@@ -67,7 +74,12 @@ export function normalizePageConfig(value: unknown): PageConfig {
   return {
     ...defaults,
     ...saved,
-    gallery: Array.isArray(saved.gallery) ? saved.gallery : defaults.gallery,
+    gallery: Array.isArray(saved.gallery)
+      ? saved.gallery.map((item) => ({
+          ...item,
+          whatsappOrder: Boolean(item?.whatsappOrder),
+        }))
+      : defaults.gallery,
     links: Array.isArray(saved.links) ? saved.links : defaults.links,
     businessHours,
   } as PageConfig;
