@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Globe, Mail, MapPin, Phone, Store } from "lucide-react";
 import { SiFacebook, SiInstagram, SiSnapchat, SiTiktok, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
 import type { PageConfig, SmartLink } from "@/lib/model";
@@ -108,6 +109,11 @@ interface Props {
 export function Storefront({ title, config: c, framed, interactive = true, footer, hideFooter = true }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!c.businessHoursEnabled) { setClock(null); return; }
@@ -319,175 +325,195 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const isOpenNow = c.businessHoursEnabled ? hoursStatus?.isOpen : c.isOpen;
   const showStatusBadge = c.businessHoursEnabled || c.showStatus;
 
-  return (
+  const fullScreenBackground = imageBackground && !framed && mounted && createPortal(
     <div
-      ref={scrollRef}
-      className={cn("relative isolate w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
-      style={{ ...bg, color: c.textColor, fontFamily: font }}
+      aria-hidden="true"
+      className="pointer-events-none fixed z-0 overflow-hidden"
+      style={{
+        top: "-45lvh",
+        bottom: "-45lvh",
+        left: "-25vw",
+        right: "-25vw",
+      }}
     >
-      {imageBackground && (
-        <div
-          className={cn(
-            "pointer-events-none -z-10 overflow-hidden",
-            framed ? "absolute inset-0 h-full w-full" : "fixed -top-[45vh] -bottom-[45vh] -inset-x-[25vw] h-[190lvh] w-[150vw]"
-          )}
-        >
-          <img
-            src={c.backgroundImage}
-            alt=""
-            className="h-full w-full scale-110 object-cover object-center"
-            style={{ filter: `blur(${c.blur}px)` }}
-          />
-          <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
-        </div>
-      )}
+      <img
+        src={c.backgroundImage}
+        alt=""
+        className="h-full w-full scale-110 object-cover object-center"
+        style={{ filter: `blur(${c.blur}px)` }}
+      />
+      <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
+    </div>,
+    document.body
+  );
 
-      {announcement}
-
-      {c.logo && c.logoShape === "cover" && (
-        <div className="relative h-44 w-full overflow-hidden">
-          <img src={c.logo} alt={`${title} cover`} className="h-full w-full object-cover" />
-          <div
-            className="absolute inset-x-0 bottom-0 h-20"
-            style={{ background: `linear-gradient(transparent, ${rgba(c.background, imageBackground ? 0 : 0.85)})` }}
-          />
-        </div>
-      )}
-
-      <main
-        className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}
-        style={{ paddingBottom: framed ? "2.5rem" : "calc(env(safe-area-inset-bottom) + 4.5rem)" }}
+  return (
+    <>
+      {fullScreenBackground}
+      <div
+        ref={scrollRef}
+        className={cn("relative z-10 w-full overflow-x-hidden", framed ? "min-h-full" : "min-h-[100dvh]")}
+        style={{ ...bg, color: c.textColor, fontFamily: font }}
       >
-        <header className="relative text-center">
-          <div className="relative z-10">
-            {logo}
-            {c.logoShape !== "cover" && initialBadge}
+        {imageBackground && framed && (
+          <div className="pointer-events-none absolute -inset-12 z-0 overflow-hidden">
+            <img
+              src={c.backgroundImage}
+              alt=""
+              className="h-full w-full scale-110 object-cover object-center"
+              style={{ filter: `blur(${c.blur}px)` }}
+            />
+            <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
           </div>
-
-          <div
-            className={cn("relative px-6 pb-6", c.logoShape !== "cover" ? "-mt-10 pt-14" : "mt-4 pt-6")}
-            style={glassStyle}
-          >
-            {c.category && (
-              <div
-                className="text-[10.5px] font-extrabold uppercase tracking-[0.22em]"
-                style={{ color: c.accent }}
-              >
-                {c.category}
-              </div>
-            )}
-
-            <h1
-              className="mt-1.5 font-extrabold tracking-tight leading-[1.08]"
-              style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}
-            >
-              {title || "Untitled page"}
-            </h1>
-
-            {c.bio && (
-              <p className="mx-auto mt-2 max-w-[32ch] text-[13.5px] leading-relaxed opacity-75">
-                {c.bio}
-              </p>
-            )}
-
-            {(showStatusBadge || (c.showEmail && c.email) || (c.showPhone && c.phone)) && (
-              <div
-                className="mt-5 flex flex-col items-center gap-2.5 border-t pt-4"
-                style={{ borderColor: rgba(c.textColor, 0.08) }}
-              >
-                {showStatusBadge && (
-                  <div
-                    data-testid="sf-status"
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11.5px] font-bold"
-                    style={{
-                      background: isOpenNow ? "rgba(22, 163, 74, 0.12)" : "rgba(220, 38, 38, 0.12)",
-                      color: isOpenNow ? "#15803d" : "#b91c1c",
-                    }}
-                  >
-                    <span
-                      className={cn("h-2 w-2 rounded-full", isOpenNow && "animate-pulse")}
-                      style={{ background: isOpenNow ? "#16a34a" : "#dc2626" }}
-                    />
-                    <span>
-                      {c.businessHoursEnabled
-                        ? hoursStatus
-                          ? hoursStatus.valid
-                            ? hoursStatus.isOpen
-                              ? "Open Now"
-                              : "Closed"
-                            : "Hours unavailable"
-                          : "Checking"
-                        : c.isOpen
-                          ? "Open Now"
-                          : "Closed"}
-                    </span>
-                    {c.businessHoursEnabled && hoursStatus?.valid && (
-                      <>
-                        <span className="opacity-35">•</span>
-                        <span className="font-semibold opacity-90" data-testid="sf-hours-text">
-                          {hoursStatus.hoursText}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {c.showEmail && c.email && (
-                  <a
-                    href={interactive ? `mailto:${c.email}` : undefined}
-                    className={cn(
-                      "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
-                      anim
-                    )}
-                    style={{
-                      background: rgba("#ffffff", 0.55),
-                      border: `1px solid ${rgba("#ffffff", 0.65)}`,
-                      color: c.textColor,
-                    }}
-                  >
-                    <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
-                    <span className="truncate">{c.email}</span>
-                  </a>
-                )}
-
-                {c.showPhone && c.phone && (
-                  <a
-                    href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
-                    className={cn(
-                      "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
-                      anim
-                    )}
-                    style={{
-                      background: rgba("#ffffff", 0.55),
-                      border: `1px solid ${rgba("#ffffff", 0.65)}`,
-                      color: c.textColor,
-                    }}
-                  >
-                    <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
-                    <span className="truncate">{c.phone}</span>
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="mt-6 space-y-6">
-          {c.showcaseFirst ? <>{gallery}{links}</> : <>{links}{gallery}</>}
-          {!gallery && !links && (
-            <div className="rounded-3xl border border-dashed px-4 py-8 text-center text-[13px] opacity-60" style={{ borderColor: rgba(c.textColor, 0.3) }}>
-              Links and showcase items will appear here.
-            </div>
-          )}
-        </div>
-
-        {!hideFooter && footer && (
-          <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
-            {footer}
-          </footer>
         )}
-      </main>
-    </div>
+
+        {announcement}
+
+        {c.logo && c.logoShape === "cover" && (
+          <div className="relative z-10 h-44 w-full overflow-hidden">
+            <img src={c.logo} alt={`${title} cover`} className="h-full w-full object-cover" />
+            <div
+              className="absolute inset-x-0 bottom-0 h-20"
+              style={{ background: `linear-gradient(transparent, ${rgba(c.background, imageBackground ? 0 : 0.85)})` }}
+            />
+          </div>
+        )}
+
+        <main
+          className={cn("relative z-10 mx-auto w-full max-w-[480px] px-5", c.logo && c.logoShape === "cover" ? "-mt-6 pt-0" : "pt-10")}
+          style={{ paddingBottom: framed ? "2.5rem" : "calc(env(safe-area-inset-bottom) + 4.5rem)" }}
+        >
+          <header className="relative text-center">
+            <div className="relative z-10">
+              {logo}
+              {c.logoShape !== "cover" && initialBadge}
+            </div>
+
+            <div
+              className={cn("relative px-6 pb-6", c.logoShape !== "cover" ? "-mt-10 pt-14" : "mt-4 pt-6")}
+              style={glassStyle}
+            >
+              {c.category && (
+                <div
+                  className="text-[10.5px] font-extrabold uppercase tracking-[0.22em]"
+                  style={{ color: c.accent }}
+                >
+                  {c.category}
+                </div>
+              )}
+
+              <h1
+                className="mt-1.5 font-extrabold tracking-tight leading-[1.08]"
+                style={{ fontSize: c.titleSize, letterSpacing: c.font === "serif" ? "-0.01em" : "-0.025em" }}
+              >
+                {title || "Untitled page"}
+              </h1>
+
+              {c.bio && (
+                <p className="mx-auto mt-2 max-w-[32ch] text-[13.5px] leading-relaxed opacity-75">
+                  {c.bio}
+                </p>
+              )}
+
+              {(showStatusBadge || (c.showEmail && c.email) || (c.showPhone && c.phone)) && (
+                <div
+                  className="mt-5 flex flex-col items-center gap-2.5 border-t pt-4"
+                  style={{ borderColor: rgba(c.textColor, 0.08) }}
+                >
+                  {showStatusBadge && (
+                    <div
+                      data-testid="sf-status"
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11.5px] font-bold"
+                      style={{
+                        background: isOpenNow ? "rgba(22, 163, 74, 0.12)" : "rgba(220, 38, 38, 0.12)",
+                        color: isOpenNow ? "#15803d" : "#b91c1c",
+                      }}
+                    >
+                      <span
+                        className={cn("h-2 w-2 rounded-full", isOpenNow && "animate-pulse")}
+                        style={{ background: isOpenNow ? "#16a34a" : "#dc2626" }}
+                      />
+                      <span>
+                        {c.businessHoursEnabled
+                          ? hoursStatus
+                            ? hoursStatus.valid
+                              ? hoursStatus.isOpen
+                                ? "Open Now"
+                                : "Closed"
+                              : "Hours unavailable"
+                            : "Checking"
+                          : c.isOpen
+                            ? "Open Now"
+                            : "Closed"}
+                      </span>
+                      {c.businessHoursEnabled && hoursStatus?.valid && (
+                        <>
+                          <span className="opacity-35">•</span>
+                          <span className="font-semibold opacity-90" data-testid="sf-hours-text">
+                            {hoursStatus.hoursText}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {c.showEmail && c.email && (
+                    <a
+                      href={interactive ? `mailto:${c.email}` : undefined}
+                      className={cn(
+                        "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
+                        anim
+                      )}
+                      style={{
+                        background: rgba("#ffffff", 0.55),
+                        border: `1px solid ${rgba("#ffffff", 0.65)}`,
+                        color: c.textColor,
+                      }}
+                    >
+                      <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
+                      <span className="truncate">{c.email}</span>
+                    </a>
+                  )}
+
+                  {c.showPhone && c.phone && (
+                    <a
+                      href={interactive ? `tel:${c.phone.replace(/[^+\d]/g, "")}` : undefined}
+                      className={cn(
+                        "inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-bold tracking-tight shadow-sm transition hover:brightness-95 active:scale-95",
+                        anim
+                      )}
+                      style={{
+                        background: rgba("#ffffff", 0.55),
+                        border: `1px solid ${rgba("#ffffff", 0.65)}`,
+                        color: c.textColor,
+                      }}
+                    >
+                      <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: c.accent }} />
+                      <span className="truncate">{c.phone}</span>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </header>
+
+          <div className="mt-6 space-y-6">
+            {c.showcaseFirst ? <>{gallery}{links}</> : <>{links}{gallery}</>}
+            {!gallery && !links && (
+              <div className="rounded-3xl border border-dashed px-4 py-8 text-center text-[13px] opacity-60" style={{ borderColor: rgba(c.textColor, 0.3) }}>
+                Links and showcase items will appear here.
+              </div>
+            )}
+          </div>
+
+          {!hideFooter && footer && (
+            <footer className="mt-10 text-center text-[11px] font-medium tracking-wide opacity-45">
+              {footer}
+            </footer>
+          )}
+        </main>
+      </div>
+    </>
   );
 }
 
