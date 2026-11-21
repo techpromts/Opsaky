@@ -319,7 +319,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const gallery = c.gallery.length > 0 && (
     <section data-testid="sf-gallery">
       {c.galleryMode === "carousel" && (
-        <div className="no-scrollbar -mx-5 flex touch-pan-x snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
+        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
           {c.gallery.map((g) => (
             <figure key={g.id} className="w-[74%] shrink-0 snap-center overflow-hidden transition-transform duration-300" style={surface}>
               {g.image && <img src={g.image} alt={g.title} className="aspect-[4/5] w-full object-cover" />}
@@ -449,7 +449,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         style={{ ...bg, color: c.textColor, fontFamily: font }}
       >
         {imageBackground && framed && (
-          <div className="pointer-events-none sticky top-0 z-0 -mb-[100%] h-[812px] w-full overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <img
               src={c.backgroundImage}
               alt=""
@@ -631,8 +631,8 @@ export function PhoneFrame({ children, className, backgroundColor = "#141716" }:
     >
       <div className="pointer-events-none absolute left-1/2 top-[22px] z-30 h-[26px] w-[104px] -translate-x-1/2 rounded-full bg-black shadow-inner" />
       <div
-        className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full touch-pan-y overscroll-contain overflow-y-auto overflow-x-hidden rounded-[40px]"
-        style={{ backgroundColor, WebkitOverflowScrolling: "touch" }}
+        className="thin-scroll relative aspect-[393/812] max-h-[82dvh] w-full overflow-y-auto overflow-x-hidden rounded-[40px]"
+        style={{ backgroundColor }}
       >
         {children}
       </div>
