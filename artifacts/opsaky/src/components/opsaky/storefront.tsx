@@ -193,6 +193,7 @@ interface Props {
 
 export function Storefront({ title, config: c, framed, interactive = true, footer, hideFooter = true }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -226,6 +227,22 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const darkSurface = isDarkColor(c.surface);
   const items = c.gallery as GalleryItemWithOrder[];
   const bgUrl = c.backgroundImage ? `url("${c.backgroundImage.replace(/"/g, '\\"')}")` : "none";
+
+  // Start horizontal carousel centered on the middle item
+  useEffect(() => {
+    if (c.galleryMode !== "carousel" || items.length < 3) return;
+    const container = carouselRef.current;
+    if (!container) return;
+    const centerMiddle = () => {
+      const midIndex = Math.floor(items.length / 2);
+      const target = container.children[midIndex] as HTMLElement | undefined;
+      if (!target) return;
+      const offset = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2;
+      container.scrollTo({ left: Math.max(0, offset), behavior: "instant" as ScrollBehavior });
+    };
+    const raf = requestAnimationFrame(centerMiddle);
+    return () => cancelAnimationFrame(raf);
+  }, [c.galleryMode, items.length, framed]);
 
   useEffect(() => {
     if (typeof document === "undefined" || !imageBackground || !c.backgroundImage) return;
@@ -401,7 +418,10 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const gallery = items.length > 0 && (
     <section data-testid="sf-gallery">
       {c.galleryMode === "carousel" && (
-        <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2">
+        <div
+          ref={carouselRef}
+          className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-2"
+        >
           {items.map((g) => {
             const showOrder = Boolean(g.whatsappOrder && whatsappDigits);
             return (
@@ -596,16 +616,14 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     createPortal(
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed z-0 overflow-hidden"
+        className="pointer-events-none fixed inset-x-0 z-0 overflow-hidden"
         style={{
-          top: "-45lvh",
-          bottom: "-45lvh",
-          left: "-25vw",
-          right: "-25vw",
+          top: "-14lvh",
+          bottom: "-14lvh",
           backgroundColor: c.background,
           backgroundImage: bgUrl,
           backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
         }}
       >
@@ -637,7 +655,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
               backgroundColor: c.background,
               backgroundImage: bgUrl,
               backgroundSize: "cover",
-              backgroundPosition: "center",
+              backgroundPosition: "center top",
               backgroundRepeat: "no-repeat",
             }}
           >
