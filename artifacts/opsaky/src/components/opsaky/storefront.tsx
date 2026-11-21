@@ -165,10 +165,15 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const scrollRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    setBgLoaded(false);
+  }, [c.backgroundImage]);
 
   useEffect(() => {
     if (!c.businessHoursEnabled) { setClock(null); return; }
@@ -189,6 +194,18 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
   const whatsappDigits = getWhatsAppDigits(c.links);
   const font = FONT_STACKS[c.font];
   const imageBackground = c.backgroundMode === "image" && Boolean(c.backgroundImage);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || !imageBackground || !c.backgroundImage) return;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = c.backgroundImage;
+    document.head.appendChild(link);
+    return () => {
+      link.remove();
+    };
+  }, [imageBackground, c.backgroundImage]);
 
   useEffect(() => {
     if (framed || typeof document === "undefined") return;
@@ -223,6 +240,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
     };
 
     if (imageBackground && c.backgroundImage) {
+      applyChromeColor(c.background);
       void extractEdgeColor(c.backgroundImage, c.overlay, c.background).then(applyChromeColor);
     } else {
       applyChromeColor(c.background);
@@ -255,7 +273,7 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
       : glassStyle;
 
   const bg: CSSProperties = imageBackground
-    ? { background: "transparent" }
+    ? { background: framed ? c.background : "transparent" }
     : c.backgroundMode === "gradient"
       ? { background: `linear-gradient(${c.gradientAngle}deg, ${c.background}, ${c.gradientColor})` }
       : { background: c.background };
@@ -427,12 +445,20 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         bottom: "-45lvh",
         left: "-25vw",
         right: "-25vw",
+        backgroundColor: c.background,
       }}
     >
       <img
         src={c.backgroundImage}
         alt=""
-        className="h-full w-full scale-110 object-cover object-center"
+        loading="eager"
+        decoding="sync"
+        fetchPriority="high"
+        onLoad={() => setBgLoaded(true)}
+        className={cn(
+          "h-full w-full scale-110 object-cover object-center transition-opacity duration-300",
+          bgLoaded ? "opacity-100" : "opacity-0"
+        )}
         style={{ filter: `blur(${c.blur}px)` }}
       />
       <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
@@ -449,11 +475,21 @@ export function Storefront({ title, config: c, framed, interactive = true, foote
         style={{ ...bg, color: c.textColor, fontFamily: font }}
       >
         {imageBackground && framed && (
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div
+            className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+            style={{ backgroundColor: c.background }}
+          >
             <img
               src={c.backgroundImage}
               alt=""
-              className="h-full w-full scale-110 object-cover object-center"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
+              onLoad={() => setBgLoaded(true)}
+              className={cn(
+                "h-full w-full scale-110 object-cover object-center transition-opacity duration-200",
+                bgLoaded ? "opacity-100" : "opacity-0"
+              )}
               style={{ filter: `blur(${c.blur}px)` }}
             />
             <div className="absolute inset-0" style={{ background: `rgba(0, 0, 0, ${c.overlay / 100})` }} />
@@ -621,11 +657,19 @@ export function StoreThumb({ title, config, height = 360, scale = 0.62 }: { titl
   );
 }
 
-export function PhoneFrame({ children, className, backgroundColor = "#141716" }: { children: ReactNode; className?: string; backgroundColor?: string }) {
+export function PhoneFrame({
+  children,
+  className,
+  backgroundColor = "#141716",
+}: {
+  children: ReactNode;
+  className?: string;
+  backgroundColor?: string;
+}) {
   return (
     <div
       className={cn(
-        "relative mx-auto w-full max-w-[393px] rounded-[52px] bg-[#141716] p-[12px] shadow-[0_35px_90px_-20px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)]",
+        "relative mx-auto w-full max-w-[393px] select-none rounded-[52px] bg-[#141716] p-[12px] shadow-[0_35px_90px_-20px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.12)]",
         className
       )}
     >
